@@ -15,7 +15,6 @@ atualizarRelogio();
 // COMUNICAÇÃO COM O SERVIDOR (NODE.JS / NEON)
 // ---------------------------------------------------
 const API_URL = 'https://skewersorder.onrender.com';
-
 let comidas = [];
 let bebidas = [];
 let carrinho = {};
