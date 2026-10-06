@@ -150,10 +150,3 @@ footer {
     margin-top: 10px; 
 }
 .btn-fechar { background: #dc3545; margin-top: 10px; }
-
-#obs-pedido {
-    text-align: left;
-    font-family: inherit;
-    padding: 10px;
-    resize: vertical;
-}
