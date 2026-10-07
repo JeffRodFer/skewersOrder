@@ -10,18 +10,13 @@ app.use(cors());
 // Permite que o servidor entenda dados no formato JSON
 app.use(express.json());
 
-// Rota principal para evitar o erro "Cannot GET /"
-app.get('/', (req, res) => {
-  res.send("O motor do Espetinho do Chefe está Online!");
-});
-
 // ROTA 1: Enviar o cardápio para o cliente
 app.get('/cardapio', async (req, res) => {
   try {
     // Busca os produtos e já entrega em ordem alfabética
     const query = 'SELECT * FROM produtos ORDER BY nome ASC';
     const resultado = await pool.query(query);
-
+    
     res.json(resultado.rows);
   } catch (erro) {
     console.error('Erro ao buscar itens:', erro);
@@ -45,7 +40,7 @@ app.post('/admin/atualizar', async (req, res) => {
     // Se a senha estiver correta, atualiza no banco Neon
     const query = 'UPDATE produtos SET disponivel = $1 WHERE id = $2';
     await pool.query(query, [disponivel, idProduto]);
-
+    
     res.json({ mensagem: 'Item atualizado com sucesso!' });
   } catch (erro) {
     console.error('Erro na atualização:', erro);
