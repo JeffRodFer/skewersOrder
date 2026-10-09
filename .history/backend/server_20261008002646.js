@@ -5,77 +5,64 @@ const pool = require('./db');
 
 const app = express();
 
-// Permite comunicação Vercel <-> Render
+// Permite que o Front-end (Vercel) converse com o Back-end
 app.use(cors());
-// Permite entender JSON
+// Permite que o servidor entenda dados no formato JSON
 app.use(express.json());
 
-// Rota de Health Check
+// Rota principal para evitar o erro "Cannot GET /"
 app.get('/', (req, res) => {
   res.send("O motor do Espetinho do Chefe está Online!");
 });
 
-// ROTA 1: Enviar o cardápio real e o WhatsApp
-app.get('/api/cardapio', async (req, res) => {
+// Rota que o Front-end vai acessar
+app.get('/api/cardapio', (req, res) => {
+  
+  // Dados simulados para teste inicial
+  const cardapioTeste = {
+    whatsapp: "5581999999999",
+    carnes: [
+      { id: 1, nome: "Carne", preco: 8.00 },
+      { id: 2, nome: "Maminha", preco: 12.00 }
+    ]
+  };
+  
+  // Envia os dados em formato JSON
+  res.json(cardapioTeste);
+});
+
+// ROTA 1: Enviar o cardápio para o cliente
+app.get('/cardapio', async (req, res) => {
   try {
+    // Busca os produtos e já entrega em ordem alfabética
     const query = 'SELECT * FROM produtos ORDER BY nome ASC';
     const resultado = await pool.query(query);
 
-    // Entregamos o WhatsApp (do .env) e os produtos (do banco)
-    res.json({
-      whatsapp: process.env.WHATSAPP_NUMBER,
-      produtos: resultado.rows
-    });
-
+    res.json(resultado.rows);
   } catch (erro) {
     console.error('Erro ao buscar itens:', erro);
     res.status(500).json({ erro: 'Falha no banco de dados' });
   }
 });
 
-// ROTA DE LOGIN DO ADMIN
-app.post('/admin/login', (req, res) => {
-  const { usuario, senha } = req.body;
-
-  const userCerto = process.env.ADMIN_USER;
-  const passCerto = process.env.ADMIN_PASS;
-
-  // Se o usuário e senha baterem com o arquivo .env
-  if (usuario === userCerto && senha === passCerto) {
-    res.json({ mensagem: 'Acesso liberado!' });
-  } else {
-    // 401 significa "Não Autorizado"
-    res.status(401).json({ erro: 'Usuário ou senha incorretos' });
-  }
-});
-
 // ROTA 2: Atualizar disponibilidade (Área do Gerente)
 app.post('/admin/atualizar', async (req, res) => {
-  const {
-    usuario,
-    senha,
-    idProduto,
-    disponivel
-  } = req.body;
+  const { usuario, senha, idProduto, disponivel } = req.body;
 
+  // Verifica se quem está acessando tem a senha correta
   const userCerto = process.env.ADMIN_USER;
   const passCerto = process.env.ADMIN_PASS;
 
-  // Verifica as credenciais do .env
   if (usuario !== userCerto || senha !== passCerto) {
     return res.status(401).json({ erro: 'Acesso negado!' });
   }
 
   try {
-    const query = `
-      UPDATE produtos 
-      SET disponivel = $1 
-      WHERE id = $2
-    `;
+    // Se a senha estiver correta, atualiza no banco Neon
+    const query = 'UPDATE produtos SET disponivel = $1 WHERE id = $2';
     await pool.query(query, [disponivel, idProduto]);
 
     res.json({ mensagem: 'Item atualizado com sucesso!' });
-
   } catch (erro) {
     console.error('Erro na atualização:', erro);
     res.status(500).json({ erro: 'Erro ao atualizar item' });

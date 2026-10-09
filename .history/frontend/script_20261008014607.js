@@ -26,7 +26,6 @@ let comidas = [];
 let bebidas = [];
 let carrinho = {};
 let dadosCliente = {};
-let credenciaisAdmin = { user: "", pass: "" };
 
 // CORREÇÃO: A gaveta do WhatsApp foi criada aqui
 let numeroZap = "";
@@ -249,11 +248,7 @@ function enviarPedidoWhatsApp() {
   }, 2000);
 }
 
-// Adicione a palavra 'event' nos parênteses
-async function loginAdmin(event) {
-  // Trava o recarregamento automático da página
-  if(event) event.preventDefault(); 
-
+async function loginAdmin() {
   const user = document.getElementById('admin-user').value;
   const pass = document.getElementById('admin-pass').value;
 
@@ -271,9 +266,7 @@ async function loginAdmin(event) {
     if (resposta.ok) {
       fecharModal('modalAdmin');
       alert("Acesso liberado! Bem-vindo.");
-      
-      // Chama a função que vai esconder o cardápio e mostrar a tabela do admin
-      abrirPainelAdmin(); 
+      // abrirPainelAdmin();
     } else {
       alert("Acesso negado: Usuário ou senha incorretos.");
     }

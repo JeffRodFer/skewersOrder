@@ -26,36 +26,20 @@ app.get('/api/cardapio', async (req, res) => {
       whatsapp: process.env.WHATSAPP_NUMBER,
       produtos: resultado.rows
     });
-
+    
   } catch (erro) {
     console.error('Erro ao buscar itens:', erro);
     res.status(500).json({ erro: 'Falha no banco de dados' });
   }
 });
 
-// ROTA DE LOGIN DO ADMIN
-app.post('/admin/login', (req, res) => {
-  const { usuario, senha } = req.body;
-
-  const userCerto = process.env.ADMIN_USER;
-  const passCerto = process.env.ADMIN_PASS;
-
-  // Se o usuário e senha baterem com o arquivo .env
-  if (usuario === userCerto && senha === passCerto) {
-    res.json({ mensagem: 'Acesso liberado!' });
-  } else {
-    // 401 significa "Não Autorizado"
-    res.status(401).json({ erro: 'Usuário ou senha incorretos' });
-  }
-});
-
 // ROTA 2: Atualizar disponibilidade (Área do Gerente)
 app.post('/admin/atualizar', async (req, res) => {
-  const {
-    usuario,
-    senha,
-    idProduto,
-    disponivel
+  const { 
+    usuario, 
+    senha, 
+    idProduto, 
+    disponivel 
   } = req.body;
 
   const userCerto = process.env.ADMIN_USER;
@@ -75,7 +59,7 @@ app.post('/admin/atualizar', async (req, res) => {
     await pool.query(query, [disponivel, idProduto]);
 
     res.json({ mensagem: 'Item atualizado com sucesso!' });
-
+    
   } catch (erro) {
     console.error('Erro na atualização:', erro);
     res.status(500).json({ erro: 'Erro ao atualizar item' });

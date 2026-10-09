@@ -26,7 +26,6 @@ let comidas = [];
 let bebidas = [];
 let carrinho = {};
 let dadosCliente = {};
-let credenciaisAdmin = { user: "", pass: "" };
 
 // CORREÇÃO: A gaveta do WhatsApp foi criada aqui
 let numeroZap = "";

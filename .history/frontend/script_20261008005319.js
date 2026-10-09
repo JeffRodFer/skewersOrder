@@ -5,45 +5,35 @@ function atualizarRelogio() {
     dateStyle: 'short',
     timeStyle: 'medium'
   };
-
-  const relogio = new Intl.DateTimeFormat('pt-BR', opcoes);
-  const dataFormatada = relogio.format(new Date());
-
+  const dataFormatada = new Intl.DateTimeFormat('pt-BR', opcoes).format(new Date());
   document.getElementById('relogio').innerText = dataFormatada;
 }
 setInterval(atualizarRelogio, 1000);
 atualizarRelogio();
 
 // ---------------------------------------------------
-// COMUNICAÇÃO COM O SERVIDOR
+// COMUNICAÇÃO COM O SERVIDOR (NODE.JS / NEON)
 // ---------------------------------------------------
-
-// DICA: Use localhost enquanto estiver programando. 
-// Troque para o Render apenas quando for publicar o site.
-const API_URL = 'http://localhost:3000';
+const API_URL = 'https://skewersorder.onrender.com';
 
 let comidas = [];
 let bebidas = [];
 let carrinho = {};
 let dadosCliente = {};
-let credenciaisAdmin = { user: "", pass: "" };
-
-// CORREÇÃO: A gaveta do WhatsApp foi criada aqui
-let numeroZap = "";
 
 async function carregarCardapio() {
   try {
-    const url = `${API_URL}/api/cardapio`;
-    const resposta = await fetch(url);
+    // Atenção: Certifique-se de que a rota correta do backend é chamada
+    // Se o seu backend usa '/api/cardapio', o fetch deve refletir isso.
+    const resposta = await fetch(`${API_URL}/api/cardapio`);
 
-    if (!resposta.ok) {
-      throw new Error("Erro na API");
-    }
-
+    // Agora isto é um objeto que contém { whatsapp: '...', produtos: [...] }
     const dadosDoServidor = await resposta.json();
+
+    // 1. Guardamos a morada/telemóvel do WhatsApp para usar no fim do pedido
     numeroZap = dadosDoServidor.whatsapp;
 
-    // 1. Abre a "caixa grande" e prepara os produtos
+    // 2. Fazemos o map() especificamente dentro de dadosDoServidor.produtos
     const produtosProntos = dadosDoServidor.produtos.map(item => {
       return {
         id: item.id,
@@ -54,23 +44,17 @@ async function carregarCardapio() {
       };
     });
 
-    // 2. Separa as "Comidas" e "Bebidas"
-    comidas = produtosProntos.filter(item =>
-      item.categoria.toLowerCase() === 'comida'
-    );
+    // Pode imprimir no console (F12) para confirmar se os dados chegaram bem
+    console.log("Produtos processados:", produtosProntos);
 
-    bebidas = produtosProntos.filter(item =>
-      item.categoria.toLowerCase() === 'bebida'
-    );
-
-    // 3. Coloca os itens na "vitrine" da página
-    renderizarLista(comidas, 'lista-carnes', 'item-carne');
-    renderizarLista(bebidas, 'lista-bebidas', 'item-bebida');
+    // Aqui chamaria a função para injetar os itens no HTML do ecrã
+    // renderizarListas(produtosProntos); 
 
   } catch (erro) {
-    console.error("Erro ao buscar cardápio:", erro);
+    console.error('Erro ao buscar o cardápio:', erro);
   }
 }
+
 
 
 // ---------------------------------------------------
@@ -80,7 +64,7 @@ async function carregarCardapio() {
 // Renderizar Produtos na Tela
 function renderizarLista(itens, idContainer, classeCor) {
   const container = document.getElementById(idContainer);
-
+  
   // Dica de Especialista (Nível Médio): Essa trava de segurança evita que 
   // o seu site quebre caso alguém apague a div do HTML sem querer.
   if (!container) {
@@ -99,7 +83,7 @@ function renderizarLista(itens, idContainer, classeCor) {
 
     const div = document.createElement('div');
     div.className = `item-lista ${classeCor}`; // Adicionei 'item-lista' para manter o CSS que fizemos
-
+    
     // ... aqui você continua com o restante do seu código (os botões de + e -)
 
     let precoFormatado = item.preco.toFixed(2).replace('.', ',');
@@ -124,10 +108,7 @@ function renderizarLista(itens, idContainer, classeCor) {
 // Inicializa o processo buscando os dados ao abrir a página
 carregarCardapio();
 
-// ===================================================
-// FUNÇÕES DE INTERAÇÃO E MODAIS
-// ===================================================
-
+// Funções de Interação e Modais
 function alterarQtd(id, valor) {
   if (carrinho[id] + valor >= 0) {
     carrinho[id] += valor;
@@ -185,26 +166,17 @@ function abrirResumo() {
   let total = 0;
   const todosItens = [...comidas, ...bebidas];
 
-  // Variável para verificar se escolheu algo
-  let temItem = false;
-
   html += `<strong>Itens Escolhidos:</strong><br>`;
 
   todosItens.forEach(item => {
     let qtd = carrinho[item.id];
     if (qtd > 0) {
-      temItem = true;
       let subtotal = qtd * item.preco;
       total += subtotal;
       let subFormatado = subtotal.toFixed(2).replace('.', ',');
       html += `${qtd}x ${item.nome} - R$ ${subFormatado}<br>`;
     }
   });
-
-  // Trava: se não escolheu nada, avisa e não abre o resumo
-  if (!temItem) {
-    return alert("Por favor, escolha pelo menos um item antes de encerrar o pedido!");
-  }
 
   if (dadosCliente.tipo === 'entregar') {
     html += `<br><small>* Taxa de entrega a combinar.</small>`;
@@ -223,6 +195,7 @@ function enviarPedidoWhatsApp() {
 
   const querFarofa = document.querySelector('input[name="farofa"]:checked').value;
   const querVinagrete = document.querySelector('input[name="vinagrete"]:checked').value;
+
   const obs = document.getElementById('obs-pedido').value;
 
   let extras = `\n*Acompanhamentos:*\n`;
@@ -238,22 +211,14 @@ function enviarPedidoWhatsApp() {
   msg += `${extras}\n`;
   msg += `*${total}*`;
 
-  // CORREÇÃO: Usa o número de WhatsApp que veio do seu servidor (.env)
-  let url = `https://wa.me/${numeroZap}?text=` + encodeURIComponent(msg);
+  let numeroAdmin = "5581920036280";
+
+  let url = `https://wa.me/${numeroAdmin}?text=` + encodeURIComponent(msg);
 
   window.open(url, '_blank');
-
-  // CORREÇÃO: Recarrega a página após 2 segundos
-  setTimeout(() => {
-    window.location.reload();
-  }, 2000);
 }
-
-// Adicione a palavra 'event' nos parênteses
-async function loginAdmin(event) {
-  // Trava o recarregamento automático da página
-  if(event) event.preventDefault(); 
-
+async function loginAdmin() {
+  // 1. Pegamos o que foi digitado nas caixas de texto
   const user = document.getElementById('admin-user').value;
   const pass = document.getElementById('admin-pass').value;
 
@@ -262,18 +227,22 @@ async function loginAdmin(event) {
   }
 
   try {
-    const resposta = await fetch(`${API_URL}/admin/login`, {
+    // 2. Batemos na porta do servidor (Render) 
+    // para verificar as credenciais
+    const resposta = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usuario: user, senha: pass })
     });
 
+    // 3. O servidor responde se a chave do cofre bateu
     if (resposta.ok) {
       fecharModal('modalAdmin');
       alert("Acesso liberado! Bem-vindo.");
-      
-      // Chama a função que vai esconder o cardápio e mostrar a tabela do admin
-      abrirPainelAdmin(); 
+
+      // Aqui chamamos a função que exibe a tela de gestão
+      // Substitua pelo nome correto da sua função, se necessário:
+      abrirPainelAdmin();
     } else {
       alert("Acesso negado: Usuário ou senha incorretos.");
     }

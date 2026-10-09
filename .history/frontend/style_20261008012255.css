@@ -1,0 +1,160 @@
+/* Gradiente de fundo geral */
+body {
+    background: linear-gradient(180deg, 
+        #001f3f 0%, #003366 20%, #00509e 40%, 
+        #808080 60%, #4d4d4d 80%, #000000 100%);
+    margin: 0;
+    font-family: Arial, sans-serif;
+    color: #ffffff;
+    min-height: 100vh;
+    padding-bottom: 50px;
+}
+
+/* Cabeçalho */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.5);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+.relogio { font-size: 12px; }
+.logo-titulo { 
+    font-size: 20px; 
+    font-weight: bold; 
+    text-align: center; 
+}
+.btn-whatsapp {
+    background-color: #25D366;
+    color: white;
+    padding: 8px 12px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+/* Botão Iniciar Pedido Piscante */
+.area-iniciar { text-align: center; margin: 20px 0; }
+.btn-iniciar {
+    background-color: #28a745;
+    color: white;
+    padding: 15px 30px;
+    font-size: 18px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    animation: piscar 1.5s infinite ease-in-out;
+    mar
+}
+@keyframes piscar {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* Listas de Produtos */
+.secao-produtos { 
+    margin: 20px; 
+    padding: 15px; 
+    background: rgba(0,0,0,0.4); 
+    border-radius: 10px; 
+}
+.titulo-carnes { color: #ff4d4d; text-align: center; }
+.item-carne { color: #d2b48c; }
+.titulo-bebidas { color: #00bfff; text-align: center; }
+.item-bebida { color: #ffffff; }
+
+.produto { 
+    display: flex; 
+    justify-content: space-between; 
+    align-items: center; 
+    margin-bottom: 10px; 
+    border-bottom: 1px solid rgba(255,255,255,0.1); 
+    padding-bottom: 10px;
+}
+.controles { display: flex; align-items: center; gap: 10px; }
+.btn-qtd { 
+    background: #333; 
+    color: white; 
+    border: none; 
+    padding: 5px 10px; 
+    border-radius: 5px; 
+    cursor: pointer; 
+}
+
+/* Rodapé */
+footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background-color: rgba(0, 0, 0, 0.8);
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+.msg-agradecimento { flex-grow: 1; text-align: center; font-size: 14px; }
+.btn-gerenciar {
+    background-color: #666666;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Modais (Janelas Ocultas) */
+.modal { 
+    display: none; 
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%; 
+    background: rgba(0,0,0,0.9); 
+    z-index: 200; 
+    overflow-y: auto; 
+}
+.modal-conteudo { 
+    background: #222; 
+    margin: 20px auto; 
+    padding: 20px; 
+    width: 90%; 
+    max-width: 400px; 
+    border-radius: 10px; 
+    color: white; 
+}
+.form-group { margin-bottom: 15px; }
+.form-group label { display: block; margin-bottom: 5px; }
+.form-group input, .form-group select { 
+    width: 100%; 
+    padding: 8px; 
+    box-sizing: border-box; 
+    border-radius: 5px; 
+    border: none; 
+}
+.btn-acao { 
+    background: #007bff; 
+    color: white; 
+    border: none; 
+    padding: 10px; 
+    width: 100%; 
+    border-radius: 5px; 
+    cursor: pointer; 
+    margin-top: 10px; 
+}
+.btn-fechar { background: #dc3545; margin-top: 10px; }
+
+#obs-pedido {
+    text-align: left;
+    font-family: inherit;
+    padding: 10px;
+    resize: vertical;
+}

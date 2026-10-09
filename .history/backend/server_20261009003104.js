@@ -26,7 +26,7 @@ app.get('/api/cardapio', async (req, res) => {
       whatsapp: process.env.WHATSAPP_NUMBER,
       produtos: resultado.rows
     });
-
+    
   } catch (erro) {
     console.error('Erro ao buscar itens:', erro);
     res.status(500).json({ erro: 'Falha no banco de dados' });
@@ -51,11 +51,11 @@ app.post('/admin/login', (req, res) => {
 
 // ROTA 2: Atualizar disponibilidade (Área do Gerente)
 app.post('/admin/atualizar', async (req, res) => {
-  const {
-    usuario,
-    senha,
-    idProduto,
-    disponivel
+  const { 
+    usuario, 
+    senha, 
+    idProduto, 
+    disponivel 
   } = req.body;
 
   const userCerto = process.env.ADMIN_USER;
@@ -75,7 +75,7 @@ app.post('/admin/atualizar', async (req, res) => {
     await pool.query(query, [disponivel, idProduto]);
 
     res.json({ mensagem: 'Item atualizado com sucesso!' });
-
+    
   } catch (erro) {
     console.error('Erro na atualização:', erro);
     res.status(500).json({ erro: 'Erro ao atualizar item' });

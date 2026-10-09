@@ -100,7 +100,7 @@ header {
 }
 
 .item-carne {
-    color: #faf9f8;
+    color: #d2b48c;
 }
 
 .titulo-bebidas {
@@ -125,18 +125,6 @@ header {
     display: flex;
     align-items: center;
     gap: 15px;
-}
-
-/* 4. Estilo dos botõezinhos (caso não tenha) */
-.controles button {
-    width: 35px;
-    height: 35px;
-    background-color: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 1.2em;
-    cursor: pointer;
 }
 
 .btn-qtd {
