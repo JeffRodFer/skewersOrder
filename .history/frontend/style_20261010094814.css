@@ -261,9 +261,3 @@ footer {
     resize: vertical;
 }
 
-#contador-obs {
-  font-size: 0.8em;
-  color: #666;
-  text-align: right;
-  margin-top: 5px;
-}

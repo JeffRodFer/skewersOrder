@@ -56,46 +56,48 @@
   </footer>
 
   <!-- MODAL 1: Cadastro do Cliente -->
-  <div id="modalCadastro" class="modal">
-    <div class="modal-conteudo">
-      <h3>Identificação</h3>
+<div id="modalCadastro" class="modal">
+  <div class="modal-conteudo">
+    <h3>Identificação</h3>
+    
+    <div class="form-group">
+      <label>Nome:</label>
+      <input type="text" id="cli-nome" placeholder="Seu nome">
+    </div>
+    
+    <div class="form-group">
+      <label>Telefone:</label>
+      <input type="tel" id="cli-telefone" placeholder="(81) 90000-0000">
+    </div>
+    
+    <div class="form-group">
+      <label>Retirada ou Entrega?</label>
+      <select id="cli-tipo" onchange="verificarEntrega()">
+        <option value="retirar">Vou retirar no local</option>
+        <option value="entregar">Quero entrega (Terá taxa)</option>
+      </select>
+    </div>
+    
+    <div class="form-group" id="div-endereco" style="display:none;">
+      <label>Endereço Completo:</label>
+      <input type="text" id="cli-endereco" placeholder="Rua, Número, Bairro">
+    </div>
 
-      <div class="form-group">
-        <label>Nome:</label>
-        <input type="text" id="cli-nome" placeholder="Seu nome">
-      </div>
+    <!-- NOVA ÁREA DE BOTÕES -->
+    <div style="display: flex; gap: 10px; margin-top: 15px;">
+      <button type="button" class="btn-secundario" 
+        onclick="fecharModalCadastro()" style="flex: 1;">
+        Voltar
+      </button>
 
-      <div class="form-group">
-        <label>Telefone:</label>
-        <input type="tel" id="cli-telefone" placeholder="(81) 90000-0000">
-      </div>
+      <button class="btn-acao" onclick="salvarCadastro()" 
+        style="flex: 2;">
+        Confirmar
+      </button>
+    </div>
 
-      <div class="form-group">
-        <label>Retirada ou Entrega?</label>
-        <select id="cli-tipo" onchange="verificarEntrega()">
-          <option value="retirar">Vou retirar no local</option>
-          <option value="entregar">Quero entrega (Terá taxa)</option>
-        </select>
-      </div>
-
-      <div class="form-group" id="div-endereco" style="display:none;">
-        <label>Endereço Completo:</label>
-        <input type="text" id="cli-endereco" placeholder="Rua, Número, Bairro">
-      </div>
-
-      <!-- NOVA ÁREA DE BOTÕES -->
-      <div style="display: flex; gap: 10px; margin-top: 15px;">
-        <button type="button" class="btn-secundario" onclick="fecharModalCadastro()" style="flex: 1;">
-          Voltar
-        </button>
-
-        <button class="btn-acao" onclick="salvarCadastro()" style="flex: 2;">
-          Confirmar
-        </button>
-      </div>
-
-    </div> <!-- Fecha a modal-conteudo -->
-  </div> <!-- Fecha a modalCadastro -->
+  </div> <!-- Fecha a modal-conteudo -->
+</div> <!-- Fecha a modalCadastro -->
 
   <!-- MODAL 2: Resumo do Pedido -->
   <div id="modalResumo" class="modal">
