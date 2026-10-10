@@ -186,7 +186,7 @@ function salvarCadastro() {
 // NOVA FUNÇÃO DO BOTÃO VOLTAR (Colocada logo abaixo)
 function fecharModalCadastro() {
   const janelaCadastro = document.getElementById('modalCadastro');
-
+  
   if (janelaCadastro) {
     janelaCadastro.style.display = 'none';
   }
