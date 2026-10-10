@@ -336,7 +336,7 @@ async function abrirPainelAdmin() {
     console.error("FALTA NO HTML: Não achei a div id='painel-admin'");
   }
 
-  const url = 'https://cardapio-espetinhos.onrender.com/api/cardapio';
+  const url = 'https://cardapio-espetinhos.onrender.com//api/cardapio';
   const resposta = await fetch(url);
   const dados = await resposta.json();
 
@@ -419,7 +419,7 @@ function alternarStatusLocal(idProduto) {
 // ==========================================
 async function salvarTudoNoBanco() {
   try {
-    const url = 'https://cardapio-espetinhos.onrender.com/admin/atualizar-lote';
+    const url = 'http://localhost:3000/admin/atualizar-lote';
 
     const resposta = await fetch(url, {
       method: 'POST',

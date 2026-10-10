@@ -419,7 +419,7 @@ function alternarStatusLocal(idProduto) {
 // ==========================================
 async function salvarTudoNoBanco() {
   try {
-    const url = 'https://cardapio-espetinhos.onrender.com/admin/atualizar-lote';
+    const url = 'http://localhost:3000/admin/atualizar-lote';
 
     const resposta = await fetch(url, {
       method: 'POST',

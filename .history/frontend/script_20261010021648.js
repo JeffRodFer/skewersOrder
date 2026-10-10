@@ -24,7 +24,7 @@ atualizarRelogio();
 
 // DICA: Use localhost enquanto estiver programando. 
 // Troque para o Render apenas quando for publicar o site.
-const API_URL = 'https://cardapio-espetinhos.onrender.com/';
+const API_URL = 'http://localhost:3000';
 
 // ARQUIVO: script.js
 const url = 'https://cardapio-espetinhos.onrender.com/';
@@ -284,7 +284,7 @@ async function loginAdmin(event) {
   console.log("O que estou enviando:", dadosDoLogin);
 
   try {
-    const url = 'https://cardapio-espetinhos.onrender.com//admin/login';
+    const url = 'http://localhost:3000/admin/login';
     const resposta = await fetch(url, {
       method: 'POST',
       headers: { 'content-Type': 'application/json' },
@@ -336,7 +336,7 @@ async function abrirPainelAdmin() {
     console.error("FALTA NO HTML: Não achei a div id='painel-admin'");
   }
 
-  const url = 'https://cardapio-espetinhos.onrender.com/api/cardapio';
+  const url = 'http://localhost:3000/api/cardapio';
   const resposta = await fetch(url);
   const dados = await resposta.json();
 
@@ -419,7 +419,7 @@ function alternarStatusLocal(idProduto) {
 // ==========================================
 async function salvarTudoNoBanco() {
   try {
-    const url = 'https://cardapio-espetinhos.onrender.com/admin/atualizar-lote';
+    const url = 'http://localhost:3000/admin/atualizar-lote';
 
     const resposta = await fetch(url, {
       method: 'POST',
