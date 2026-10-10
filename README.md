@@ -1,4 +1,4 @@
-# 🍢 Cardápio Digital - Espetinho do Chefe 2.0
+# 🍢 Cardápio Digital - Espetinhos
 
 Um aplicativo web de cardápio digital e sistema de pedidos desenvolvido para facilitar a escolha de produtos e gerenciar o envio das solicitações. O projeto utiliza uma arquitetura moderna dividindo o Front-end (interface do cliente) do Back-end (servidor e base de dados).
 
