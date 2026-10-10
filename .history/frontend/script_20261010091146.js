@@ -27,7 +27,7 @@ atualizarRelogio();
 const API_URL = 'https://cardapio-espetinhos.onrender.com';
 
 // ARQUIVO: script.js
-const url = 'https://cardapio-espetinhos.onrender.com';
+const url = 'https://cardapio-espetinhos.onrender.com/';
 
 fetch(url)
   .then(resposta => resposta.json())
