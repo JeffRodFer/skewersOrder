@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Espetinho do Chefe</title>
+  <!-- Aqui conectamos o arquivo de estilos -->
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <!-- Cabeçalho -->
+  <header>
+    <div class="relogio" id="relogio">
+      00/00/0000 00:00:00
+    </div>
+    <div class="logo-titulo">Espetinho do Chefe 2.0</div>
+    <a href="https://wa.me/5581920036280" class="btn-whatsapp" target="_blank">WhatsApp</a>
+  </header>
+
+  <!-- Área de Iniciar Pedido -->
+  <div class="area-iniciar">
+    <button class="btn-iniciar" onclick="abrirModalCadastro()">
+      INICIAR PEDIDO
+    </button>
+  </div>
+
+  <!-- Lista de Comidas -->
+  <div class="secao-produtos">
+    <h2 class="titulo-carnes">Carnes e Acompanhamentos</h2>
+    <div id="lista-carnes"></div> <!-- A MUDANÇA FOI FEITA AQUI -->
+  </div>
+
+  <!-- Lista de Bebidas -->
+  <div class="secao-produtos">
+    <h2 class="titulo-bebidas">Bebidas</h2>
+    <div id="lista-bebidas"></div>
+  </div>
+
+  <!-- Área de Encerrar Pedido -->
+  <div class="area-iniciar">
+    <button class="btn-iniciar" style="animation: none; background: #ff9900;" onclick="abrirResumo()">
+      ENCERRAR PEDIDO
+    </button>
+  </div>
+
+  <!-- Rodapé -->
+  <footer>
+    <button class="btn-gerenciar" onclick="abrirModalAdmin()">
+      ⚙️ Gerenciar
+    </button>
+    <div class="msg-agradecimento">Agradecemos a Preferência</div>
+    <div style="width: 80px;"></div>
+  </footer>
+
+  <!-- MODAL 1: Cadastro do Cliente -->
+  <div id="modalCadastro" class="modal">
+    <div class="modal-conteudo">
+      <h3>Identificação</h3>
+      <div class="form-group">
+        <label>Nome:</label>
+        <input type="text" id="cli-nome" placeholder="Seu nome">
+      </div>
+      <div class="form-group">
+        <label>Telefone:</label>
+        <input type="tel" id="cli-telefone" placeholder="(81) 90000-0000">
+      </div>
+      <div class="form-group">
+        <label>Retirada ou Entrega?</label>
+        <select id="cli-tipo" onchange="verificarEntrega()">
+          <option value="retirar">Vou retirar no local</option>
+          <option value="entregar">Quero entrega (Terá taxa)</option>
+        </select>
+      </div>
+      <div class="form-group" id="div-endereco" style="display:none;">
+        <label>Endereço Completo:</label>
+        <input type="text" id="cli-endereco" placeholder="Rua, Número, Bairro">
+      </div>
+      <button class="btn-acao" onclick="salvarCadastro()">
+        Confirmar e Escolher Itens
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Resumo do Pedido -->
+  <div id="modalResumo" class="modal">
+    <div class="modal-conteudo">
+      <h3>Resumo do Pedido</h3>
+      <div id="conteudo-resumo" style="font-size: 14px; margin-bottom: 20px;">
+      </div>
+
+      <!-- INÍCIO DAS NOVAS OPÇÕES DE FAROFA, VINAGRETE E OBS -->
+
+      <!-- Opção de Farofa -->
+      <div class="form-group">
+        <label>Incluir Farofa?</label>
+        <div style="display: flex; gap: 15px; margin-top: 5px;">
+          <label><input type="radio" name="farofa" value="Sim" checked> Sim</label>
+          <label><input type="radio" name="farofa" value="Não"> Não</label>
+        </div>
+      </div>
+
+      <!-- Opção de Vinagrete -->
+      <div class="form-group">
+        <label>Incluir Vinagrete?</label>
+        <div style="display: flex; gap: 15px; margin-top: 5px;">
+          <label><input type="radio" name="vinagrete" value="Sim" checked> Sim</label>
+          <label><input type="radio" name="vinagrete" value="Não"> Não</label>
+        </div>
+      </div>
+
+      <!-- Campo de Observações -->
+      <div class="form-group">
+        <label>Observações do Pedido:</label>
+        <textarea id="obs-pedido" rows="3" placeholder="Ex: Bem passado, deixar na portaria..."
+          style="width: 100%; border-radius: 5px; padding: 8px;">
+              </textarea>
+      </div>
+
+      <!-- FIM DAS NOVAS OPÇÕES -->
+
+      <h3 id="valor-total">Total: R$ 0,00</h3>
+      <button class="btn-acao btn-whatsapp" onclick="enviarPedidoWhatsApp()">
+        Enviar Pedido (WhatsApp)
+      </button>
+      <button class="btn-acao btn-fechar" onclick="fecharModal('modalResumo')">
+        Voltar e Escolher Mais
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Login Admin (Gerenciar) -->
+  <div id="modalAdmin" class="modal">
+    <div class="modal-conteudo">
+      <h3>Área Restrita (Gerenciar)</h3>
+      <div class="form-group">
+        <label>Usuário:</label>
+        <input type="text" id="admin-user">
+      </div>
+      <div class="form-group">
+        <label>Senha:</label>
+        <input type="password" id="admin-pass">
+      </div>
+      <button type="button" class="btn-acao" onclick="loginAdmin(event)">Entrar</button>
+      <button class="btn-acao btn-fechar" onclick="fecharModal('modalAdmin')">
+        Cancelar
+      </button>
+    </div>
+  </div>
+
+
+  <!-- ========================================== -->
+  <!-- PAINEL DE ADMINISTRAÇÃO (Oculto por padrão)-->
+  <!-- ========================================== -->
+  <div id="painel-admin" style="display: none; padding: 20px; min-height: 100vh;">
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid white; padding-bottom: 10px; margin-bottom: 20px;">
+      <h2 style="color: white; margin: 0;">⚙️ Gestão do Cardápio</h2>
+      <button class="btn-acao btn-fechar" onclick="fecharPainelAdmin()" style="width: auto; padding: 10px 20px;">
+        Sair
+      </button>
+    </div>
+    
+    <p style="color: #ccc;">Clique no botão para Ativar ou Desativar os produtos na loja.</p>
+    
+    <!-- Aqui o JavaScript vai injetar a lista completa de produtos -->
+    <div id="lista-admin"></div>
+  </div>
+
+  <!-- Aqui conectamos o arquivo de lógica e ações -->
+  <script src="script.js"></script>
+</body>
+
+</html>
