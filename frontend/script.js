@@ -47,7 +47,7 @@ let numeroZap = "";
 
 async function carregarCardapio() {
   try {
-    const url = `${API_URL}/api/cardapio`;
+    const API_URL = 'https://skewers-order-backend.vercel.app';
     const resposta = await fetch(url);
 
     if (!resposta.ok) {
@@ -349,7 +349,7 @@ async function abrirPainelAdmin() {
 
   // Nova URL da Vercel para puxar a lista de produtos no Painel Admin
   const url = 'https://skewers-order-backend.vercel.app/api/cardapio';
-  
+
   const resposta = await fetch(url);
   const dados = await resposta.json();
 
