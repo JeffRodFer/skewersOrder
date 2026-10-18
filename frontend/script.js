@@ -23,11 +23,11 @@ atualizarRelogio();
 // ---------------------------------------------------
 
 // DICA: Use localhost enquanto estiver programando. 
-// Troque para o Render apenas quando for publicar o site.
-const API_URL = 'https://cardapio-espetinhos.onrender.com';
+// Troque para a Vercel apenas quando for publicar o site.
+const API_URL = 'https://skewers-order-backend.vercel.app/api/cardapio';
 
 // ARQUIVO: script.js
-const url = 'https://cardapio-espetinhos.onrender.com';
+const url = 'https://skewers-order-backend.vercel.app/api/cardapio';
 
 fetch(url)
   .then(resposta => resposta.json())
@@ -293,7 +293,9 @@ async function loginAdmin(event) {
   console.log("O que estou enviando:", dadosDoLogin);
 
   try {
-    const url = 'https://cardapio-espetinhos.onrender.com/admin/login';
+    // Nova URL da Vercel apontando para a verificação de Login
+    const url = 'https://skewers-order-backend.vercel.app/admin/login';
+
     const resposta = await fetch(url, {
       method: 'POST',
       headers: { 'content-Type': 'application/json' },
@@ -345,7 +347,9 @@ async function abrirPainelAdmin() {
     console.error("FALTA NO HTML: Não achei a div id='painel-admin'");
   }
 
-  const url = 'https://cardapio-espetinhos.onrender.com/api/cardapio';
+  // Nova URL da Vercel para puxar a lista de produtos no Painel Admin
+  const url = 'https://skewers-order-backend.vercel.app/api/cardapio';
+  
   const resposta = await fetch(url);
   const dados = await resposta.json();
 
@@ -428,7 +432,8 @@ function alternarStatusLocal(idProduto) {
 // ==========================================
 async function salvarTudoNoBanco() {
   try {
-    const url = 'https://cardapio-espetinhos.onrender.com/admin/atualizar-lote';
+    // Nova URL da Vercel apontando para a rota de admin
+    const url = 'https://skewers-order-backend.vercel.app/admin/atualizar-lote';
 
     const resposta = await fetch(url, {
       method: 'POST',
