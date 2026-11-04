@@ -264,6 +264,26 @@ function enviarPedidoWhatsApp() {
   // CORREÇÃO: Usa o número de WhatsApp que veio do seu servidor (.env)
   let url = `https://wa.me/${numeroZap}?text=` + encodeURIComponent(msg);
 
+  // === NOVO BLOCO: DAR BAIXA AUTOMÁTICA NO ESTOQUE ===
+  const itensComprados = [];
+  const todosItens = [...comidas, ...bebidas];
+
+  todosItens.forEach(item => {
+    let qtd = carrinho[item.id];
+    if (qtd > 0) {
+      itensComprados.push({ id: item.id, quantidade: qtd });
+    }
+  });
+
+  if (itensComprados.length > 0) {
+    fetch('https://skewers-order-backend.vercel.app/api/registrar-venda', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ itensCarrinho: itensComprados })
+    }).catch(erro => console.error("Erro ao abater estoque:", erro));
+  }
+  // === FIM DO NOVO BLOCO ===
+
   window.open(url, '_blank');
 
   // CORREÇÃO: Recarrega a página após 2 segundos
@@ -271,6 +291,7 @@ function enviarPedidoWhatsApp() {
     window.location.reload();
   }, 2000);
 }
+
 
 // ===================================================
 // ÁREA DE ADMINISTRAÇÃO E GESTÃO DE ESTOQUE
@@ -359,8 +380,9 @@ async function abrirPainelAdmin() {
   desenharPainel();
 }
 
+
 // ==========================================
-// 2. CONSTRÓI A TELA BASEADA NA MEMÓRIA
+// 2. CONSTRÓI A TELA BASEADA NA MEMÓRIA (Com Estoque)
 // ==========================================
 function desenharPainel() {
   const divLista = document.getElementById('lista-admin');
@@ -376,12 +398,8 @@ function desenharPainel() {
     </button>
   `;
 
-  const comidas = listaGlobalProdutos.filter(
-    item => item.categoria === 'comida'
-  );
-  const bebidas = listaGlobalProdutos.filter(
-    item => item.categoria === 'bebida'
-  );
+  const comidas = listaGlobalProdutos.filter(item => item.categoria === 'comida');
+  const bebidas = listaGlobalProdutos.filter(item => item.categoria === 'bebida');
 
   function desenharCaixinha(item) {
     const corBotao = item.disponivel ? '#ff4d4d' : '#00cc66';
@@ -389,19 +407,31 @@ function desenharPainel() {
 
     const div = document.createElement('div');
     div.className = 'item-lista';
+    div.style = 'display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 10px;';
+
     div.innerHTML = `
-      <div style="color: white;">
-        <strong>${item.nome}</strong><br>
-        <small>R$ ${parseFloat(item.preco).toFixed(2)} - ${item.categoria}</small>
-      </div>
-      <div>
-        <button 
-          onclick="alternarStatusLocal(${item.id})" 
-          style="background-color: ${corBotao}; color: white; border: none; 
-          padding: 10px 15px; border-radius: 5px; cursor: pointer; 
-          font-weight: bold;"
-        >
+      <div style="color: white; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong>${item.nome}</strong><br>
+          <small>R$ ${parseFloat(item.preco).toFixed(2)} - ${item.categoria}</small>
+        </div>
+        <button onclick="alternarStatusLocal(${item.id})" 
+          style="background-color: ${corBotao}; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">
           ${textoBotao}
+        </button>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; background-color: #222; padding: 10px; border-radius: 5px;">
+        <div>
+          <label style="color: white; font-size: 14px;">Estoque Atual:</label>
+          <input type="number" id="estoque_${item.id}" value="${item.estoque || 0}" 
+            onchange="atualizarEstoqueLocal(${item.id}, this.value)"
+            style="width: 60px; padding: 5px; margin-left: 5px; border-radius: 3px; border: 1px solid #ccc; text-align: center;">
+        </div>
+        
+        <button onclick="solicitarEstorno(${item.id}, '${item.nome}')" 
+          style="background-color: #ff9800; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px;">
+          ↩️ Estornar
         </button>
       </div>
     `;
@@ -416,6 +446,7 @@ function desenharPainel() {
   bebidas.forEach(desenharCaixinha);
 }
 
+
 // ==========================================
 // 3. MUDA A COR NO CLIQUE (NA MEMÓRIA)
 // ==========================================
@@ -428,11 +459,51 @@ function alternarStatusLocal(idProduto) {
 }
 
 // ==========================================
+// 3.5 FUNÇÕES DE ESTOQUE LOCAL
+// ==========================================
+function atualizarEstoqueLocal(idProduto, novoValor) {
+  const produto = listaGlobalProdutos.find(item => item.id === idProduto);
+  if (produto) {
+    produto.estoque = parseInt(novoValor); // Guarda o valor na memória para salvar depois
+  }
+}
+
+async function solicitarEstorno(idProduto, nomeProduto) {
+  const qtdDevolvida = prompt(`Quantos espetinhos de "${nomeProduto}" foram devolvidos pelo motoboy?`);
+
+  if (!qtdDevolvida || isNaN(qtdDevolvida) || Number(qtdDevolvida) <= 0) {
+    return; // Cancela se o gestor não digitar um número válido
+  }
+
+  try {
+    const url = 'https://skewers-order-backend.vercel.app/admin/estornar';
+    const resposta = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usuario: credenciaisAdmin.user,
+        senha: credenciaisAdmin.pass,
+        itensEstorno: [{ id: idProduto, quantidade: Number(qtdDevolvida) }]
+      })
+    });
+
+    if (resposta.ok) {
+      alert(`${qtdDevolvida} unidade(s) devolvida(s) ao estoque com sucesso!`);
+      // Recarrega o painel para puxar o novo estoque atualizado do banco
+      abrirPainelAdmin();
+    } else {
+      alert("Erro ao processar devolução.");
+    }
+  } catch (erro) {
+    console.error("Erro no estorno:", erro);
+  }
+}
+
+// ==========================================
 // 4. ENVIA O LOTE PARA O BANCO DE DADOS
 // ==========================================
 async function salvarTudoNoBanco() {
   try {
-    // Nova URL da Vercel apontando para a rota de admin
     const url = 'https://skewers-order-backend.vercel.app/admin/atualizar-lote';
 
     const resposta = await fetch(url, {
@@ -441,12 +512,12 @@ async function salvarTudoNoBanco() {
       body: JSON.stringify({
         usuario: credenciaisAdmin.user,
         senha: credenciaisAdmin.pass,
-        listaProdutos: listaGlobalProdutos
+        produtos: listaGlobalProdutos // <-- Atenção à mudança de nome aqui
       })
     });
 
     if (resposta.ok) {
-      alert("Cardápio salvo definitivamente no banco de dados!");
+      alert("Cardápio e Estoque salvos definitivamente no banco de dados!");
     } else {
       const resultado = await resposta.json();
       alert("Erro ao salvar: " + resultado.erro);
