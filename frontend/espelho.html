@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cardápio - Espetinho do Chefe</title>
+  
+  <!-- Opcional: Reaproveita o seu arquivo de estilo principal -->
+  <link rel="stylesheet" href="style.css"> 
+  
+  <style>
+    /* Estilos práticos e diretos para a vitrine de visualização */
+    body {
+      background-color: #121212;
+      font-family: sans-serif;
+      margin: 0;
+      padding: 15px;
+    }
+    .cabecalho-espelho {
+      text-align: center;
+      padding: 20px 0;
+      color: white;
+    }
+    .categoria-titulo {
+      color: #ff9800;
+      margin-top: 20px;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+    }
+    .item-vitrine {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px 0;
+      border-bottom: 1px dashed #a4a1a1;
+      color: white;
+    }
+    .item-nome {
+      font-weight: bold;
+      font-size: 16px;
+    }
+    .item-preco {
+      color: #e9f0ec;
+      font-weight: bold;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="cabecalho-espelho">
+    <h1>Espetinho do Chefe</h1>
+    <p>Confira as nossas opções disponíveis no momento!</p>
+  </div>
+
+  <div id="vitrine-cardapio">
+    <p style="color: white; text-align: center;">Carregando cardápio...</p>
+  </div>
+
+  <script>
+    // Conexão direta e exclusiva de leitura com o seu servidor
+    const urlAPI = 'https://skewers-order-backend.vercel.app/api/cardapio';
+
+    async function montarVitrine() {
+      try {
+        const resposta = await fetch(urlAPI);
+        const dados = await resposta.json();
+        
+        const divVitrine = document.getElementById('vitrine-cardapio');
+        divVitrine.innerHTML = ''; // Remove o texto de carregamento
+
+        // Regra de Negócio: Filtra apenas os itens com disponivel = true
+        const itensAtivos = dados.produtos.filter(item => item.disponivel);
+        
+        // Separação em categorias
+        const comidas = itensAtivos.filter(i => i.categoria === 'comida');
+        const bebidas = itensAtivos.filter(i => i.categoria === 'bebida');
+
+        // Função prática para desenhar blocos repetitivos sem sujar o código
+        function desenharSecao(titulo, itens) {
+          if (itens.length === 0) return '';
+          
+          let html = `<h2 class="categoria-titulo">${titulo}</h2>`;
+          
+          itens.forEach(item => {
+            const precoFormatado = parseFloat(item.preco)
+              .toFixed(2)
+              .replace('.', ',');
+              
+            html += `
+              <div class="item-vitrine">
+                <span class="item-nome">${item.nome}</span>
+                <span class="item-preco">R$ ${precoFormatado}</span>
+              </div>
+            `;
+          });
+          return html;
+        }
+
+        // Injeta os blocos processados na tela do cliente
+        divVitrine.innerHTML += desenharSecao('🍖 Carnes', comidas);
+        divVitrine.innerHTML += desenharSecao('🥤 Bebidas', bebidas);
+
+      } catch (erro) {
+        console.error("Erro na comunicação com o banco:", erro);
+        document.getElementById('vitrine-cardapio').innerHTML = `
+          <p style="color: #ff4d4d; text-align: center;">
+            Sistema indisponível. Solicite o cardápio ao garçom.
+          </p>
+        `;
+      }
+    }
+
+    // Dispara a construção da vitrine assim que o cliente abre a página
+    montarVitrine();
+  </script>
+</body>
+</html>
