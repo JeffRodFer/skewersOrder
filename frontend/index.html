@@ -95,7 +95,6 @@
     </div>
 
   </div> <!-- Fecha a modal-conteudo -->
-  </div> <!-- Fecha a modalCadastro -->
 
   <!-- MODAL 2: Resumo do Pedido -->
   <div id="modalResumo" class="modal">
@@ -127,15 +126,15 @@
       <!-- Campo de Observações -->
       <div class="form-group">
         <label>Observações do Pedido:</label>
-        <textarea id="obs-pedido" rows="3" maxlength="120" placeholder="Ex: Bem passado, deixar na portaria..."
+        <textarea id="obs-pedido" rows="3" maxlength="90" placeholder="Ex: Bem passado, deixar na portaria..."
           style="width: 100%; border-radius: 5px; padding: 8px;"></textarea>
-        <div id="contador-obs">0/120 caracteres</div>
+        <div id="contador-obs">0/90 caracteres</div>
       </div>
 
       <!-- FIM DAS NOVAS OPÇÕES -->
 
       <h3 id="valor-total">Total: R$ 0,00</h3>
-      <button class="btn-acao btn-whatsapp" onclick="enviarPedidoWhatsApp()">
+      <button class="btn-acao btn-whatsapp" onclick="finalizarPedido()">
         Enviar Pedido (WhatsApp)
       </button>
       <button class="btn-acao btn-fechar" onclick="fecharModal('modalResumo')">

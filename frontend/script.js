@@ -1,6 +1,13 @@
+// === 1. IDENTIDADE DO CLIENTE 2 ===
+const ID_CLIENTE = 2;
+
 // ATENÇÃO: Esta linha deve ficar solta no topo do arquivo script.js!
 let credenciaisAdmin = { user: '', pass: '' };
-let listaGlobalProdutos = []; // Adicione esta linha!
+let listaGlobalProdutos = [];
+
+// === 2. APONTAR PARA O BACKEND CENTRAL ===
+const API_URL = `https://skewers-order-backend.vercel.app/api/cardapio?usuario=${ID_CLIENTE}`;
+const url = `https://skewers-order-backend.vercel.app/api/cardapio?usuario=${ID_CLIENTE}`;
 
 // Relógio Sincronizado (Horário de Brasília)
 function atualizarRelogio() {
@@ -22,18 +29,13 @@ atualizarRelogio();
 // COMUNICAÇÃO COM O SERVIDOR
 // ---------------------------------------------------
 
-// DICA: Use localhost enquanto estiver programando. 
-// Troque para a Vercel apenas quando for publicar o site.
-const API_URL = 'https://skewers-order-backend.vercel.app/api/cardapio';
-
-// ARQUIVO: script.js
-const url = 'https://skewers-order-backend.vercel.app/api/cardapio';
+// (As variáveis antigas foram apagadas daqui!)
 
 fetch(url)
   .then(resposta => resposta.json())
   .then(dados => {
-    // Vamos ver os dados chegando no painel do navegador!
     console.log("Meus espetinhos:", dados.produtos);
+    listaGlobalProdutos = dados.produtos;
   })
   .catch(erro => console.error("Erro:", erro));
 
@@ -171,15 +173,22 @@ function salvarCadastro() {
   dadosCliente = {
     nome: document.getElementById('cli-nome').value,
     telefone: document.getElementById('cli-telefone').value,
-    tipo: document.getElementById('cli-tipo').value,
+    tipo: document.getElementById('cli-tipo').value, // 'retirar' ou 'entregar'
     endereco: document.getElementById('cli-endereco').value
   };
 
+  // 1. Trava de segurança: Nome
   if (!dadosCliente.nome) {
     return alert("Por favor, preencha o seu nome!");
   }
 
-  fecharModal('modalCadastro');
+  // 2. Trava de segurança: Endereço obrigatório SE for entrega
+  if (dadosCliente.tipo === 'entregar' && !dadosCliente.endereco) {
+    return alert("Para entrega, precisamos que preencha o endereço completo!");
+  }
+
+  // 3. Tudo certo! Fecha a tela e libera o cardápio
+  fecharModal('modalCadastro'); // Ou a função que você usa para fechar
   alert("Cadastro salvo! Escolha os seus espetinhos.");
 }
 
@@ -272,6 +281,24 @@ function enviarPedidoWhatsApp() {
   }, 2000);
 }
 
+// ==========================================
+// 5. FAXINA DO MODAL DE RESUMO (NOVA FUNÇÃO)
+// ==========================================
+function fecharEResetarResumo() {
+  document.querySelector('input[name="farofa"][value="Sim"]').checked = true;
+  document.querySelector('input[name="vinagrete"][value="Sim"]').checked = true;
+  document.getElementById('obs-pedido').value = '';
+
+  const divContador = document.getElementById('contador-obs');
+  divContador.innerText = '0/90 caracteres';
+  divContador.style.color = '#666666';
+  divContador.style.fontWeight = 'normal';
+
+  fecharModal('modalResumo');
+}
+
+
+
 // ===================================================
 // ÁREA DE ADMINISTRAÇÃO E GESTÃO DE ESTOQUE
 // ===================================================
@@ -348,8 +375,7 @@ async function abrirPainelAdmin() {
   }
 
   // Nova URL da Vercel para puxar a lista de produtos no Painel Admin
-  const url = 'https://skewers-order-backend.vercel.app/api/cardapio';
-
+  const url = `https://skewers-order-backend.vercel.app/api/cardapio?usuario=${ID_CLIENTE}`;
   const resposta = await fetch(url);
   const dados = await resposta.json();
 
@@ -481,3 +507,233 @@ function fecharPainelAdmin() {
     carregarCardapio();
   }
 }
+
+// Função para enviar os dados para a API salvar no banco
+async function salvarPedidoNoBanco(dadosCliente, total, tipoEntrega) {
+
+  // 1. A URL que acabamos de criar no backend
+  const urlAPI = 'https://skewers-order-backend.vercel.app/api/pedidos';
+
+  // 2. O pacote JSON que vamos enviar
+  // Note que usamos o ID_CLIENTE que você já tem no topo do arquivo
+  const pacoteDeDados = {
+    tenantId: ID_CLIENTE,
+    clienteNome: dadosCliente.nome,
+    total: total,
+    tipoEntrega: tipoEntrega
+  };
+
+  try {
+    // 3. O Fetch faz a requisição do tipo POST
+    const resposta = await fetch(urlAPI, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json' // Avisa que é JSON
+      },
+      body: JSON.stringify(pacoteDeDados) // Transforma o objeto em texto
+    });
+
+    // 4. Verificação de segurança
+    if (!resposta.ok) {
+      throw new Error("Erro de comunicação com o servidor.");
+    }
+
+    // 5. Recebemos de volta o pedido que o backend salvou, 
+    // AGORA JÁ COM O UUID GERADO LÁ NO NODE.JS!
+    const pedidoSalvo = await resposta.json();
+
+    console.log("Sucesso! UUID do banco:", pedidoSalvo.id);
+
+    // Retornamos o pedido para usar o UUID no fluxo do WhatsApp
+    return pedidoSalvo;
+
+  } catch (erro) {
+    console.error("Erro ao salvar no banco:", erro);
+    alert("Ops! Houve um problema ao registrar seu pedido.");
+    return null; // Retorna nulo se der errado
+  }
+}
+
+// ==========================================
+// 1. REGRA VISUAL DO ENDEREÇO
+// ==========================================
+function verificarEntrega() {
+  const tipoEscolhido = document.getElementById('cli-tipo').value;
+  const divEndereco = document.getElementById('div-endereco');
+
+  if (tipoEscolhido === 'entregar') {
+    divEndereco.style.display = 'block';
+  } else {
+    divEndereco.style.display = 'none';
+    document.getElementById('cli-endereco').value = '';
+  }
+}
+
+// ==========================================
+// 2. O MOTOR PRINCIPAL (FINALIZAR PEDIDO)
+// ==========================================
+async function finalizarPedido() {
+
+  let totalItens = Object.values(carrinho).reduce((soma, qtd) => soma + qtd, 0);
+  if (totalItens === 0) {
+    return alert("Seu carrinho está vazio! Escolha alguns espetinhos primeiro.");
+  }
+
+  // ====================================================
+  // NOVIDADE: TRAVA VISUAL DE DUPLO CLIQUE
+  // ====================================================
+  const btnEnviar = document.querySelector('.btn-whatsapp');
+  const textoOriginal = btnEnviar.innerText; // Guarda o texto "Enviar Pedido"
+
+  btnEnviar.innerText = "Enviando... Aguarde ⏳";
+  btnEnviar.disabled = true;       // Impede novos cliques
+  btnEnviar.style.opacity = "0.6"; // Deixa o botão meio transparente
+  // ====================================================
+
+  const farofaEscolhida = document.querySelector('input[name="farofa"]:checked').value;
+  const vinagreteEscolhido = document.querySelector('input[name="vinagrete"]:checked').value;
+  const obsDigitadas = document.getElementById('obs-pedido').value;
+
+  let listaParaBackend = [];
+  let subtotal = 0;
+
+  for (let idProduto in carrinho) {
+    // ... (Mantém o mesmo loop do carrinho) ...
+    let qtd = carrinho[idProduto];
+    if (qtd > 0) {
+      let prod = listaGlobalProdutos.find(p => p.id == idProduto);
+      subtotal += parseFloat(prod.preco) * qtd;
+      listaParaBackend.push({
+        id: prod.id,
+        quantidade: qtd,
+        preco: parseFloat(prod.preco),
+        nome: prod.nome
+      });
+    }
+  }
+
+  let taxaDeEntrega = 0.00;
+  if (dadosCliente.tipo === "entregar") {
+    taxaDeEntrega = 5.00;
+  }
+  let totalGeral = subtotal + taxaDeEntrega;
+
+  const pacoteDeDados = {
+    tenantId: ID_CLIENTE,
+    clienteNome: dadosCliente.nome,
+    total: totalGeral,
+    tipoEntrega: dadosCliente.tipo,
+    carrinho: listaParaBackend,
+    farofa: farofaEscolhida,
+    vinagrete: vinagreteEscolhido,
+    observacoes: obsDigitadas
+  };
+
+  try {
+    const resposta = await fetch('https://skewers-order-backend.vercel.app/api/pedidos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pacoteDeDados)
+    });
+
+    if (!resposta.ok) {
+      throw new Error("Falha no servidor ao registrar o pedido.");
+    }
+
+    const pedidoSalvo = await resposta.json();
+    console.log("Banco de dados OK. UUID gerado:", pedidoSalvo.id);
+
+    // O sucesso recarrega a página no final do zap, então não precisamos destravar o botão aqui.
+    enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega);
+
+  } catch (erro) {
+    console.error("Erro no fechamento do pedido:", erro);
+    alert("Ops! Houve uma falha de conexão. Tente novamente.");
+
+    // ====================================================
+    // DESTRAVA O BOTÃO EM CASO DE ERRO PARA NOVA TENTATIVA
+    // ====================================================
+    btnEnviar.innerText = textoOriginal;
+    btnEnviar.disabled = false;
+    btnEnviar.style.opacity = "1";
+  }
+}
+
+// ==========================================
+// 3. A IMPRESSORA DA COZINHA (WHATSAPP)
+// ==========================================
+function enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega) {
+
+  const protocolo = pedidoSalvo.id.substring(0, 6).toUpperCase();
+
+  let texto = `*NOVO PEDIDO - #${protocolo}*\n\n`;
+  texto += `*Cliente:* ${pacoteDeDados.clienteNome}\n`;
+
+  if (pacoteDeDados.tipoEntrega === 'entregar') {
+    texto += `*Tipo:* Entrega 🛵\n`;
+    texto += `*Endereço:* ${dadosCliente.endereco}\n`;
+  } else {
+    texto += `*Tipo:* Retirada no Local 🏪\n`;
+  }
+
+  texto += `\n*🛒 Itens do Pedido:*\n`;
+
+  pacoteDeDados.carrinho.forEach(item => {
+    let subtotalItem = item.quantidade * item.preco;
+    let valorFormatado = subtotalItem.toFixed(2).replace('.', ',');
+    texto += `▪️ ${item.quantidade}x ${item.nome} - R$ ${valorFormatado}\n`;
+  });
+
+  texto += `\n*🍽️ Acompanhamentos e Extras:*\n`;
+  texto += `Farofa: ${pacoteDeDados.farofa}\n`;
+  texto += `Vinagrete: ${pacoteDeDados.vinagrete}\n`;
+
+  if (pacoteDeDados.observacoes && pacoteDeDados.observacoes.trim() !== "") {
+    texto += `*Obs:* ${pacoteDeDados.observacoes}\n`;
+  }
+
+  texto += `\n*📊 Resumo dos Valores:*\n`;
+
+  if (taxaDeEntrega > 0) {
+    let subtotalPuro = pacoteDeDados.total - taxaDeEntrega;
+    texto += `Subtotal: R$ ${subtotalPuro.toFixed(2).replace('.', ',')}\n`;
+    texto += `Taxa de Entrega: R$ ${taxaDeEntrega.toFixed(2).replace('.', ',')}\n`;
+  }
+
+  let totalFormatado = pacoteDeDados.total.toFixed(2).replace('.', ',');
+  texto += `*💰 TOTAL GERAL: R$ ${totalFormatado}*\n\n`;
+
+  const textoCodificado = encodeURIComponent(texto);
+  const urlZap = `https://wa.me/55${numeroZap}?text=${textoCodificado}`;
+
+  window.open(urlZap, '_blank');
+
+  alert(`Pedido enviado com sucesso!\nAnote o seu protocolo: ${protocolo}`);
+  window.location.reload();
+}
+
+// ==========================================
+// 4. EFEITOS VISUAIS E UX (CONTADOR DE CARACTERES)
+// ==========================================
+
+// Usamos o evento 'input' porque ele detecta até se o cliente colar um texto pronto
+document.getElementById('obs-pedido').addEventListener('input', function () {
+
+  // 1. Conta quantas letras estão na caixa de texto neste exato milissegundo
+  const qtdDigitada = this.value.length;
+
+  // 2. Pega a div do contador
+  const divContador = document.getElementById('contador-obs');
+
+  // 3. Atualiza o texto da tela
+  divContador.innerText = `${qtdDigitada}/90 caracteres`;
+
+  // Bônus de UX: Muda a cor para vermelho se bater no teto!
+  if (qtdDigitada >= 90) {
+    divContador.style.color = 'red';
+    divContador.style.fontWeight = 'bold';
+  } else {
+    divContador.style.color = '#666666'; // Cor cinza normal
+    divContador.style.fontWeight = 'normal';
+  }
+});

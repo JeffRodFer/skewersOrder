@@ -2,7 +2,8 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const pool = require('./db');
-const bcrypt = require('bcrypt')
+const bcrypt = require('bcrypt');
+const crypto = require('crypto'); // <-- ADICIONE ESTA LINHA AQUI
 const app = express();
 
 // ==========================================
@@ -15,30 +16,64 @@ app.use(cors());
 app.use(express.json());
 
 
-// ==========================================
-// 2. ROTAS PÚBLICAS (Cliente)
-// ==========================================
+// ROTA 2: Salvar o pedido E os itens do carrinho (Com Transação)
+app.post('/api/pedidos', async (req, res) => {
+  
+  // 1. Agora também recebemos o 'carrinho' (que é um Array de itens)
+  const { tenantId, clienteNome, total, tipoEntrega, carrinho } = req.body;
 
-// Rota de Health Check (Para ver se está online)
-app.get('/', (req, res) => {
-  res.send("O motor do Espetinho do Chefe está Online!");
-});
+  // 2. Geramos o CPF do Pedido
+  const idDoNovoPedido = crypto.randomUUID(); 
 
-// ROTA 1: Enviar o cardápio real e o WhatsApp
-app.get('/api/cardapio', async (req, res) => {
+  // 3. Pegamos um "cliente" exclusivo para a transação isolada
+  const client = await pool.connect();
+
   try {
-    const query = 'SELECT * FROM produtos ORDER BY nome ASC';
-    const resultado = await pool.query(query);
+    // 4. Inicia a Trava de Segurança
+    await client.query('BEGIN'); 
 
-    // Entrega o WhatsApp (do .env) e os produtos (do banco)
-    return res.json({
-      whatsapp: process.env.WHATSAPP_NUMBER,
-      produtos: resultado.rows
+    // 5. Salva a Capa do Pedido
+    const queryPedido = `
+      INSERT INTO pedidos 
+      (id, tenant_id, cliente_nome, total, tipo_entrega) 
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *;
+    `;
+    const valPedido = [idDoNovoPedido, tenantId, clienteNome, total, tipoEntrega];
+    const resultadoPedido = await client.query(queryPedido, valPedido);
+
+    // 6. Loop (For) para salvar cada espetinho do carrinho
+    const queryItem = `
+      INSERT INTO itens_pedido 
+      (pedido_id, produto_id, quantidade, preco_unitario) 
+      VALUES ($1, $2, $3, $4)
+    `;
+
+    for (let item of carrinho) {
+      // O item.id é o ID do produto (ex: Espetinho de Carne)
+      const valItem = [idDoNovoPedido, item.id, item.quantidade, item.preco];
+      await client.query(queryItem, valItem);
+    }
+
+    // 7. Se chegou até aqui sem erros, grava pra valer!
+    await client.query('COMMIT'); 
+
+    // Devolve para o Frontend o pedido pronto com o UUID
+    return res.status(201).json({
+      mensagem: "Pedido e Itens salvos com sucesso!",
+      id: idDoNovoPedido,
+      pedido: resultadoPedido.rows[0]
     });
-
+    
   } catch (erro) {
-    console.error('Erro ao buscar itens:', erro);
-    return res.status(500).json({ erro: 'Falha no banco de dados' });
+    // Se deu erro em QUALQUER etapa, desfaz tudo!
+    await client.query('ROLLBACK'); 
+    console.error("Erro na transação. Tudo desfeito:", erro);
+    return res.status(500).json({ erro: "Falha ao gravar pedido completo" });
+    
+  } finally {
+    // 8. Libera a conexão do banco
+    client.release(); 
   }
 });
 
