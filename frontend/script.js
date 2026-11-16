@@ -847,8 +847,9 @@ renderizarGrafico(['Asinha', 'Calabresa', 'Pão de Alho', 'Cerveja', 'Coração'
 // Busca os dados reais no backend e desenha o gráfico
 async function carregarGraficoVendas() {
   try {
-    // Utiliza o ID_CLIENTE do restaurante atual
-    const resposta = await fetch(`/api/relatorios/top5/${ID_CLIENTE}`);
+    // AQUI ESTAVA O ERRO: Agora com a URL completa do seu backend!
+    const urlGrafico = `https://skewers-order-backend.vercel.app/api/relatorios/top5/${ID_CLIENTE}`;
+    const resposta = await fetch(urlGrafico);
     const dados = await resposta.json();
 
     // Separa os nomes e as quantidades que vieram do banco
@@ -857,7 +858,7 @@ async function carregarGraficoVendas() {
 
     // Renderiza o gráfico com os dados reais
     renderizarGrafico(nomesProdutos, quantidadesVendidas);
-
+    
   } catch (erro) {
     console.error("Erro ao puxar dados do gráfico:", erro);
   }
