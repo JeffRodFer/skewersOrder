@@ -403,6 +403,11 @@ async function abrirPainelAdmin() {
   listaGlobalProdutos = dados.produtos ? dados.produtos : dados;
 
   desenharPainel();
+
+  // ==========================================
+  // INICIA O GRÁFICO ASSIM QUE O PAINEL ABRE
+  // ==========================================
+  carregarGraficoVendas();
 }
 
 
