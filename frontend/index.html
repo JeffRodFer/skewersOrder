@@ -7,6 +7,8 @@
   <title>Cardápio de Espetinhos</title>
   <!-- Aqui conectamos o arquivo de estilos -->
   <link rel="stylesheet" href="style.css">
+  <!-- Importando o Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -173,6 +175,11 @@
       <button class="btn-acao btn-fechar" onclick="fecharPainelAdmin()" style="width: auto; padding: 10px 20px;">
         Sair
       </button>
+    </div>
+
+    <div style="background-color: #222; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+      <h3 style="color: white; text-align: center;">📊 Top 5 Mais Vendidos</h3>
+      <canvas id="graficoVendas" width="400" height="200"></canvas>
     </div>
 
     <p style="color: #ccc;">Clique no botão para Ativar ou Desativar os produtos na loja.</p>

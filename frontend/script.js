@@ -807,3 +807,33 @@ document.getElementById('obs-pedido').addEventListener('input', function () {
     divContador.style.fontWeight = 'normal';
   }
 });
+
+function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
+  const ctx = document.getElementById('graficoVendas').getContext('2d');
+
+  new Chart(ctx, {
+    type: 'bar', // Pode mudar para 'pie' (pizza) ou 'line' (linha)
+    data: {
+      labels: nomesProdutos, // Ex: ['Asinha', 'Calabresa', 'Coração']
+      datasets: [{
+        label: 'Unidades Vendidas',
+        data: quantidadesVendidas, // Ex: [45, 30, 25]
+        backgroundColor: '#00cc66', // Cor da barra
+        borderRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: 'white' } }
+      },
+      scales: {
+        y: { ticks: { color: 'white' }, beginAtZero: true },
+        x: { ticks: { color: 'white' } }
+      }
+    }
+  });
+}
+
+// Chame a função com dados fictícios só para testar o visual hoje:
+renderizarGrafico(['Asinha', 'Calabresa', 'Pão de Alho', 'Cerveja', 'Coração'], [45, 38, 30, 25, 15]);
