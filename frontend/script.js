@@ -837,3 +837,26 @@ function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
 
 // Chame a função com dados fictícios só para testar o visual hoje:
 renderizarGrafico(['Asinha', 'Calabresa', 'Pão de Alho', 'Cerveja', 'Coração'], [45, 38, 30, 25, 15]);
+
+
+// Busca os dados reais no backend e desenha o gráfico
+async function carregarGraficoVendas() {
+  try {
+    // Utiliza o ID_CLIENTE do restaurante atual
+    const resposta = await fetch(`/api/relatorios/top5/${ID_CLIENTE}`);
+    const dados = await resposta.json();
+
+    // Separa os nomes e as quantidades que vieram do banco
+    const nomesProdutos = dados.map(item => item.nome);
+    const quantidadesVendidas = dados.map(item => parseInt(item.total_vendido));
+
+    // Renderiza o gráfico com os dados reais
+    renderizarGrafico(nomesProdutos, quantidadesVendidas);
+
+  } catch (erro) {
+    console.error("Erro ao puxar dados do gráfico:", erro);
+  }
+}
+
+// Chame esta função logo dentro da função abrirPainelAdmin()
+// para o gráfico atualizar sempre que o dono abrir a gestão.

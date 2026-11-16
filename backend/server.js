@@ -18,19 +18,19 @@ app.use(express.json());
 
 // ROTA 2: Salvar o pedido E os itens do carrinho (Com Transação)
 app.post('/api/pedidos', async (req, res) => {
-  
+
   // 1. Agora também recebemos o 'carrinho' (que é um Array de itens)
   const { tenantId, clienteNome, total, tipoEntrega, carrinho } = req.body;
 
   // 2. Geramos o CPF do Pedido
-  const idDoNovoPedido = crypto.randomUUID(); 
+  const idDoNovoPedido = crypto.randomUUID();
 
   // 3. Pegamos um "cliente" exclusivo para a transação isolada
   const client = await pool.connect();
 
   try {
     // 4. Inicia a Trava de Segurança
-    await client.query('BEGIN'); 
+    await client.query('BEGIN');
 
     // 5. Salva a Capa do Pedido
     const queryPedido = `
@@ -56,7 +56,7 @@ app.post('/api/pedidos', async (req, res) => {
     }
 
     // 7. Se chegou até aqui sem erros, grava pra valer!
-    await client.query('COMMIT'); 
+    await client.query('COMMIT');
 
     // Devolve para o Frontend o pedido pronto com o UUID
     return res.status(201).json({
@@ -64,16 +64,16 @@ app.post('/api/pedidos', async (req, res) => {
       id: idDoNovoPedido,
       pedido: resultadoPedido.rows[0]
     });
-    
+
   } catch (erro) {
     // Se deu erro em QUALQUER etapa, desfaz tudo!
-    await client.query('ROLLBACK'); 
+    await client.query('ROLLBACK');
     console.error("Erro na transação. Tudo desfeito:", erro);
     return res.status(500).json({ erro: "Falha ao gravar pedido completo" });
-    
+
   } finally {
     // 8. Libera a conexão do banco
-    client.release(); 
+    client.release();
   }
 });
 
@@ -122,6 +122,33 @@ app.post('/admin/login', async (req, res) => {
   } catch (erro) {
     console.error('Erro na verificação do Hash:', erro);
     return res.status(500).json({ erro: 'Erro interno no servidor' });
+  }
+});
+
+// ==========================================
+// ROTA PARA O RELATÓRIO DO GRÁFICO (TOP 5) - PASSO 2 ATUALIZADO
+// ==========================================
+app.get('/api/relatorios/top5/:tenantId', async (req, res) => {
+  const { tenantId } = req.params;
+
+  try {
+    // Usamos um JOIN para cruzar os itens vendidos com o nome do produto no cardápio
+    const query = `
+      SELECT p.nome as nome, SUM(i.quantidade) as total_vendido
+      FROM itens_pedido i
+      JOIN produtos p ON i.produto_id = p.id
+      WHERE p.tenant_id = $1
+      GROUP BY p.nome
+      ORDER BY total_vendido DESC
+      LIMIT 5;
+    `;
+
+    const { rows } = await pool.query(query, [tenantId]);
+    res.json(rows);
+
+  } catch (error) {
+    console.error("Erro ao gerar relatório:", error);
+    res.status(500).json({ error: 'Erro ao buscar dados do gráfico' });
   }
 });
 
