@@ -15,24 +15,39 @@ app.use(cors());
 // Permite o servidor entender JSON (O "óleo no motor")
 app.use(express.json());
 
+// ==========================================
+// ROTA 1: BUSCAR CARDÁPIO (BLINDADA COM TENANT_ID)
+// ==========================================
+app.get('/api/cardapio', async (req, res) => {
+  const tenantId = req.query.usuario;
 
+  try {
+    const query = `
+      SELECT * FROM produtos 
+      WHERE tenant_id = $1 
+      ORDER BY categoria, id;
+    `;
+    const { rows } = await pool.query(query, [tenantId]);
+    res.json({ produtos: rows });
+
+  } catch (error) {
+    console.error("Erro ao buscar cardápio:", error);
+    res.status(500).json({ error: 'Erro ao buscar produtos' });
+  }
+});
+
+// ==========================================
 // ROTA 2: Salvar o pedido E os itens do carrinho (Com Transação)
+// ==========================================
 app.post('/api/pedidos', async (req, res) => {
-
-  // 1. Agora também recebemos o 'carrinho' (que é um Array de itens)
   const { tenantId, clienteNome, total, tipoEntrega, carrinho } = req.body;
 
-  // 2. Geramos o CPF do Pedido
   const idDoNovoPedido = crypto.randomUUID();
-
-  // 3. Pegamos um "cliente" exclusivo para a transação isolada
   const client = await pool.connect();
 
   try {
-    // 4. Inicia a Trava de Segurança
     await client.query('BEGIN');
 
-    // 5. Salva a Capa do Pedido
     const queryPedido = `
       INSERT INTO pedidos 
       (id, tenant_id, cliente_nome, total, tipo_entrega) 
@@ -42,7 +57,6 @@ app.post('/api/pedidos', async (req, res) => {
     const valPedido = [idDoNovoPedido, tenantId, clienteNome, total, tipoEntrega];
     const resultadoPedido = await client.query(queryPedido, valPedido);
 
-    // 6. Loop (For) para salvar cada espetinho do carrinho
     const queryItem = `
       INSERT INTO itens_pedido 
       (pedido_id, produto_id, quantidade, preco_unitario) 
@@ -50,15 +64,12 @@ app.post('/api/pedidos', async (req, res) => {
     `;
 
     for (let item of carrinho) {
-      // O item.id é o ID do produto (ex: Espetinho de Carne)
       const valItem = [idDoNovoPedido, item.id, item.quantidade, item.preco];
       await client.query(queryItem, valItem);
     }
 
-    // 7. Se chegou até aqui sem erros, grava pra valer!
     await client.query('COMMIT');
 
-    // Devolve para o Frontend o pedido pronto com o UUID
     return res.status(201).json({
       mensagem: "Pedido e Itens salvos com sucesso!",
       id: idDoNovoPedido,
@@ -66,13 +77,11 @@ app.post('/api/pedidos', async (req, res) => {
     });
 
   } catch (erro) {
-    // Se deu erro em QUALQUER etapa, desfaz tudo!
     await client.query('ROLLBACK');
     console.error("Erro na transação. Tudo desfeito:", erro);
     return res.status(500).json({ erro: "Falha ao gravar pedido completo" });
 
   } finally {
-    // 8. Libera a conexão do banco
     client.release();
   }
 });
