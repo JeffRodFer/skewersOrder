@@ -180,6 +180,29 @@
     <div style="background-color: #222; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
       <h3 style="color: white; text-align: center;">📊 Top 7 Mais Vendidos</h3>
       <canvas id="graficoVendas" width="400" height="200"></canvas>
+      <div style="background-color: #222; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+        <h3 style="color: white; text-align: center;">📊 Top 7 Mais Vendidos</h3>
+        <canvas id="graficoVendas" width="400" height="200"></canvas>
+
+        <!-- NOVO CÓDIGO: Faturamento e Botão de Zerar -->
+        <div style="margin-top: 40px; text-align: center; border-top: 1px solid #555; padding-top: 20px;">
+          <h3 style="color: white;">💰 Faturamento Diário</h3>
+
+          <ul id="listaVendasDiarias" style="color: white; list-style: none; padding: 0; font-size: 18px;"></ul>
+
+          <button onclick="zerarVendas()"
+            style="background-color: #ff4444; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; font-weight: bold; font-size: 16px;">
+            🗑️ Zerar Todo o Histórico de Vendas
+          </button>
+        </div>
+        <!-- FIM DO NOVO CÓDIGO -->
+
+      </div>
+
+      <p style="color: #ccc;">Clique no botão para Ativar ou Desativar os produtos na loja.</p>
+
+      <!-- Aqui o JavaScript vai injetar a lista completa de produtos -->
+      <div id="lista-admin"></div>
     </div>
 
     <p style="color: #ccc;">Clique no botão para Ativar ou Desativar os produtos na loja.</p>

@@ -826,13 +826,13 @@ function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
 
   // 3. Atribui a criação do gráfico à variável (AGORA NA HORIZONTAL)
   meuGraficoVendas = new Chart(ctx, {
-    type: 'bar', 
+    type: 'bar',
     data: {
-      labels: nomesProdutos, 
+      labels: nomesProdutos,
       datasets: [{
         label: 'Unidades Vendidas',
-        data: quantidadesVendidas, 
-        backgroundColor: '#00cc66', 
+        data: quantidadesVendidas,
+        backgroundColor: '#00cc66',
         borderRadius: 5
       }]
     },
@@ -871,5 +871,59 @@ async function carregarGraficoVendas() {
   }
 }
 
-// Chame esta função logo dentro da função abrirPainelAdmin()
-// para o gráfico atualizar sempre que o dono abrir a gestão.
+// 1. Função para buscar e exibir o faturamento diário
+async function carregarVendasDiarias() {
+  try {
+    // Puxa da Rota 4 (Troque a URL base se for diferente)
+    const resposta = await fetch(`https://skewers-order-backend.vercel.app/api/relatorios/vendas-diarias/${usuario_id_da_loja}`);
+    if (!resposta.ok) throw new Error('Erro ao buscar faturamento');
+
+    const dados = await resposta.json();
+    const lista = document.getElementById('listaVendasDiarias');
+    lista.innerHTML = '';
+
+    if (dados.length === 0) {
+      lista.innerHTML = '<li>Nenhuma venda registrada ainda.</li>';
+      return;
+    }
+
+    dados.forEach(dia => {
+      // Converte a data para o padrão do Brasil
+      const dataFormatada = new Date(dia.data_venda).toLocaleDateString('pt-BR');
+      // Converte o número para formato de dinheiro (R$)
+      const valorFormatado = Number(dia.total_arrecadado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+      const item = document.createElement('li');
+      item.style.marginBottom = '10px';
+      item.innerHTML = `<strong>${dataFormatada}</strong>: <span style="color: #00cc66;">${valorFormatado}</span>`;
+      lista.appendChild(item);
+    });
+  } catch (erro) {
+    console.error("Erro:", erro);
+  }
+}
+
+// 2. Função acionada pelo botão vermelho
+async function zerarVendas() {
+  // Trava de segurança para evitar cliques acidentais
+  const confirmacao = confirm("CUIDADO! Tem certeza que deseja apagar TODO o histórico de vendas? O gráfico e o faturamento voltarão a zero.");
+
+  if (confirmacao) {
+    try {
+      const resposta = await fetch(`https://skewers-order-backend.vercel.app/api/relatorios/zerar/${usuario_id_da_loja}`, {
+        method: 'DELETE'
+      });
+
+      if (resposta.ok) {
+        alert("Histórico de vendas zerado com sucesso!");
+        // Atualiza a tela automaticamente apagando os dados antigos
+        carregarGraficoVendas();
+        carregarVendasDiarias();
+      } else {
+        alert("Falha ao zerar. Tente novamente.");
+      }
+    } catch (erro) {
+      console.error("Erro ao limpar dados:", erro);
+    }
+  }
+}
