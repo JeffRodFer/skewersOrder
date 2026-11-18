@@ -271,8 +271,7 @@ function enviarPedidoWhatsApp() {
   msg += `*${total}*`;
 
   // CORREÇÃO: Usa o número de WhatsApp que veio do seu servidor (.env)
-  let url = `https://wa.me/${numeroZap}?text=` + encodeURIComponent(msg);
-
+  let url = "https://wa.me/5581920036280?text=" + encodeURIComponent(msg);
   // === NOVO BLOCO: DAR BAIXA AUTOMÁTICA NO ESTOQUE ===
   const itensComprados = [];
   const todosItens = [...comidas, ...bebidas];
@@ -782,8 +781,7 @@ function enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega) {
   texto += `*💰 TOTAL GERAL: R$ ${totalFormatado}*\n\n`;
 
   const textoCodificado = encodeURIComponent(texto);
-  const urlZap = `https://wa.me/55${numeroZap}?text=${textoCodificado}`;
-
+  const urlZap = "https://wa.me/5581920036280?text=" + textoCodificado;
   window.open(urlZap, '_blank');
 
   alert(`Pedido enviado com sucesso!\nAnote o seu protocolo: ${protocolo}`);
