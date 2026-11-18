@@ -824,26 +824,27 @@ function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
     meuGraficoVendas.destroy();
   }
 
-  // 3. Atribui a criação do gráfico à variável
+  // 3. Atribui a criação do gráfico à variável (AGORA NA HORIZONTAL)
   meuGraficoVendas = new Chart(ctx, {
-    type: 'bar',
+    type: 'bar', 
     data: {
-      labels: nomesProdutos,
+      labels: nomesProdutos, 
       datasets: [{
         label: 'Unidades Vendidas',
-        data: quantidadesVendidas,
-        backgroundColor: '#00cc66',
+        data: quantidadesVendidas, 
+        backgroundColor: '#00cc66', 
         borderRadius: 5
       }]
     },
     options: {
+      indexAxis: 'y', // <-- A MÁGICA ACONTECE AQUI (Deita o gráfico)
       responsive: true,
       plugins: {
         legend: { labels: { color: 'white' } }
       },
       scales: {
-        y: { ticks: { color: 'white' }, beginAtZero: true },
-        x: { ticks: { color: 'white' } }
+        x: { ticks: { color: 'white' }, beginAtZero: true }, // O eixo X agora mostra os números
+        y: { ticks: { color: 'white' } }                     // O eixo Y agora mostra os nomes em pé
       }
     }
   });
