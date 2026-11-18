@@ -7,6 +7,8 @@
   <title>Cardápio de Espetinhos</title>
   <!-- Aqui conectamos o arquivo de estilos -->
   <link rel="stylesheet" href="style.css">
+  <!-- Importando o Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 
 <body>
@@ -16,7 +18,7 @@
     <div class="relogio" id="relogio">
       00/00/0000 00:00:00
     </div>
-    <div class="logo-titulo">Cardápio - Espetinhos</div>
+    <div class="logo-titulo">Cardápio Espetinhos</div>
     <a href="https://wa.me/5581920036280" class="btn-whatsapp" target="_blank">WhatsApp</a>
   </header>
 
@@ -95,7 +97,6 @@
     </div>
 
   </div> <!-- Fecha a modal-conteudo -->
-  </div> <!-- Fecha a modalCadastro -->
 
   <!-- MODAL 2: Resumo do Pedido -->
   <div id="modalResumo" class="modal">
@@ -127,15 +128,15 @@
       <!-- Campo de Observações -->
       <div class="form-group">
         <label>Observações do Pedido:</label>
-        <textarea id="obs-pedido" rows="3" maxlength="120" placeholder="Ex: Bem passado, deixar na portaria..."
+        <textarea id="obs-pedido" rows="3" maxlength="90" placeholder="Ex: Bem passado, deixar na portaria..."
           style="width: 100%; border-radius: 5px; padding: 8px;"></textarea>
-        <div id="contador-obs">0/120 caracteres</div>
+        <div id="contador-obs">0/90 caracteres</div>
       </div>
 
       <!-- FIM DAS NOVAS OPÇÕES -->
 
       <h3 id="valor-total">Total: R$ 0,00</h3>
-      <button class="btn-acao btn-whatsapp" onclick="enviarPedidoWhatsApp()">
+      <button class="btn-acao btn-whatsapp" onclick="finalizarPedido()">
         Enviar Pedido (WhatsApp)
       </button>
       <button class="btn-acao btn-fechar" onclick="fecharModal('modalResumo')">
@@ -174,6 +175,11 @@
       <button class="btn-acao btn-fechar" onclick="fecharPainelAdmin()" style="width: auto; padding: 10px 20px;">
         Sair
       </button>
+    </div>
+
+    <div style="background-color: #222; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+      <h3 style="color: white; text-align: center;">📊 Top 7 Mais Vendidos</h3>
+      <canvas id="graficoVendas" width="400" height="200"></canvas>
     </div>
 
     <p style="color: #ccc;">Clique no botão para Ativar ou Desativar os produtos na loja.</p>
