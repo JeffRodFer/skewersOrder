@@ -813,17 +813,26 @@ document.getElementById('obs-pedido').addEventListener('input', function () {
   }
 });
 
+// 1. Declare a variável fora da função para guardar a memória do gráfico
+let meuGraficoVendas = null;
+
 function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
   const ctx = document.getElementById('graficoVendas').getContext('2d');
 
-  new Chart(ctx, {
-    type: 'bar', // Pode mudar para 'pie' (pizza) ou 'line' (linha)
+  // 2. Apaga o gráfico antigo se ele existir
+  if (meuGraficoVendas !== null) {
+    meuGraficoVendas.destroy();
+  }
+
+  // 3. Atribui a criação do gráfico à variável
+  meuGraficoVendas = new Chart(ctx, {
+    type: 'bar',
     data: {
-      labels: nomesProdutos, // Ex: ['Asinha', 'Calabresa', 'Coração']
+      labels: nomesProdutos,
       datasets: [{
         label: 'Unidades Vendidas',
-        data: quantidadesVendidas, // Ex: [45, 30, 25]
-        backgroundColor: '#00cc66', // Cor da barra
+        data: quantidadesVendidas,
+        backgroundColor: '#00cc66',
         borderRadius: 5
       }]
     },
@@ -840,9 +849,6 @@ function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
   });
 }
 
-// Chame a função com dados fictícios só para testar o visual hoje:
-renderizarGrafico(['Asinha', 'Calabresa', 'Pão de Alho', 'Cerveja', 'Coração'], [45, 38, 30, 25, 15]);
-
 
 // Busca os dados reais no backend e desenha o gráfico
 async function carregarGraficoVendas() {
@@ -858,7 +864,7 @@ async function carregarGraficoVendas() {
 
     // Renderiza o gráfico com os dados reais
     renderizarGrafico(nomesProdutos, quantidadesVendidas);
-    
+
   } catch (erro) {
     console.error("Erro ao puxar dados do gráfico:", erro);
   }
