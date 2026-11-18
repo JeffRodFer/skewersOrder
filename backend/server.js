@@ -233,6 +233,71 @@ app.post('/admin/atualizar-lote', async (req, res) => {
   }
 });
 
+// ==========================================
+// ROTA 2: SALVAR O PEDIDO (COM TRANSAÇÃO)
+// ==========================================
+app.post('/api/pedidos', async (req, res) => {
+  const { tenantId, clienteNome, total, tipoEntrega, carrinho } = req.body;
+  const idDoNovoPedido = crypto.randomUUID();
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+    
+    // Ajustado para usuario_id para bater com o seu banco de dados
+    const queryPedido = `
+      INSERT INTO pedidos (id, usuario_id, cliente_nome, total, tipo_entrega) 
+      VALUES ($1, $2, $3, $4, $5) RETURNING *;
+    `;
+    const valPedido = [idDoNovoPedido, tenantId, clienteNome, total, tipoEntrega];
+    const resultadoPedido = await client.query(queryPedido, valPedido);
+
+    const queryItem = `
+      INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario) 
+      VALUES ($1, $2, $3, $4)
+    `;
+    for (let item of carrinho) {
+      const valItem = [idDoNovoPedido, item.id, item.quantidade, item.preco];
+      await client.query(queryItem, valItem);
+    }
+
+    await client.query('COMMIT');
+    return res.status(201).json({
+      mensagem: "Pedido salvo com sucesso!",
+      id: idDoNovoPedido
+    });
+  } catch (erro) {
+    await client.query('ROLLBACK');
+    console.error("Erro ao gravar pedido:", erro);
+    return res.status(500).json({ erro: "Falha ao gravar pedido" });
+  } finally {
+    client.release();
+  }
+});
+
+// ==========================================
+// ROTA 3: RELATÓRIO DO GRÁFICO (TOP 7)
+// ==========================================
+app.get('/api/relatorios/top5/:tenantId', async (req, res) => {
+  const { tenantId } = req.params;
+  try {
+    const query = `
+      SELECT p.nome as nome, SUM(i.quantidade) as total_vendido
+      FROM itens_pedido i
+      JOIN produtos p ON i.produto_id = p.id
+      WHERE p.usuario_id = $1
+      GROUP BY p.nome
+      ORDER BY total_vendido DESC
+      LIMIT 7;
+    `;
+    const { rows } = await pool.query(query, [tenantId]);
+    res.json(rows);
+  } catch (error) {
+    console.error("Erro ao gerar relatório:", error);
+    res.status(500).json({ error: 'Erro ao buscar dados do gráfico' });
+  }
+});
+
 
 // ==========================================
 // 4. LIGANDO O SERVIDOR
