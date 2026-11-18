@@ -135,13 +135,11 @@ app.post('/admin/login', async (req, res) => {
 });
 
 // ==========================================
-// ROTA PARA O RELATÓRIO DO GRÁFICO (TOP 5) - PASSO 2 ATUALIZADO
+// ROTA 3: RELATÓRIO DO GRÁFICO (TOP 7)
 // ==========================================
 app.get('/api/relatorios/top5/:tenantId', async (req, res) => {
   const { tenantId } = req.params;
-
   try {
-    // Usamos um JOIN para cruzar os itens vendidos com o nome do produto no cardápio
     const query = `
       SELECT p.nome as nome, SUM(i.quantidade) as total_vendido
       FROM itens_pedido i
@@ -149,12 +147,10 @@ app.get('/api/relatorios/top5/:tenantId', async (req, res) => {
       WHERE p.tenant_id = $1
       GROUP BY p.nome
       ORDER BY total_vendido DESC
-      LIMIT 5;
+      LIMIT 7; -- AQUI ESTÁ A MUDANÇA (De 5 para 7)
     `;
-
     const { rows } = await pool.query(query, [tenantId]);
     res.json(rows);
-
   } catch (error) {
     console.error("Erro ao gerar relatório:", error);
     res.status(500).json({ error: 'Erro ao buscar dados do gráfico' });
