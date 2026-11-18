@@ -404,6 +404,9 @@ async function abrirPainelAdmin() {
 
   desenharPainel();
 
+  carregarGraficoVendas();
+  carregarVendasDiarias();
+
   // ==========================================
   // INICIA O GRÁFICO ASSIM QUE O PAINEL ABRE
   // ==========================================
