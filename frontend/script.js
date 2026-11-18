@@ -875,8 +875,8 @@ async function carregarGraficoVendas() {
 // 1. Função para buscar e exibir o faturamento diário
 async function carregarVendasDiarias() {
   try {
-    // Puxa da Rota 4 (Troque a URL base se for diferente)
-    const resposta = await fetch(`https://skewers-order-backend.vercel.app/api/relatorios/vendas-diarias/${usuario_id_da_loja}`);
+    // CORREÇÃO: Trocado de 'usuario_id_da_loja' para 'ID_CLIENTE'
+    const resposta = await fetch(`https://skewers-order-backend.vercel.app/api/relatorios/vendas-diarias/${ID_CLIENTE}`);
     if (!resposta.ok) throw new Error('Erro ao buscar faturamento');
 
     const dados = await resposta.json();
