@@ -58,23 +58,30 @@ app.post('/api/pedidos', async (req, res) => {
     const resultadoPedido = await client.query(queryPedido, valPedido);
 
     const queryItem = `
-      INSERT INTO itens_pedido 
-      (pedido_id, produto_id, quantidade, preco_unitario) 
+      INSERT INTO itens_pedido
+      (pedido_id, produto_id, quantidade, preco_unitario)
       VALUES ($1, $2, $3, $4)
     `;
 
     for (let item of carrinho) {
-      const valItem = [idDoNovoPedido, item.id, item.quantidade, item.preco];
+      const valItem = [
+        idDoNovoPedido,
+        item.id,
+        item.quantidade,
+        item.preco
+      ];
       await client.query(queryItem, valItem);
+
+      const queryBaixa = `
+        UPDATE produtos
+        SET estoque = estoque - $1
+        WHERE id = $2
+      `;
+      await client.query(queryBaixa, [
+        item.quantidade,
+        item.id
+      ]);
     }
-
-    await client.query('COMMIT');
-
-    return res.status(201).json({
-      mensagem: "Pedido e Itens salvos com sucesso!",
-      id: idDoNovoPedido,
-      pedido: resultadoPedido.rows[0]
-    });
 
   } catch (erro) {
     await client.query('ROLLBACK');
@@ -243,7 +250,7 @@ app.post('/api/pedidos', async (req, res) => {
 
   try {
     await client.query('BEGIN');
-    
+
     // Ajustado para usuario_id para bater com o seu banco de dados
     const queryPedido = `
       INSERT INTO pedidos (id, usuario_id, cliente_nome, total, tipo_entrega) 
@@ -252,14 +259,7 @@ app.post('/api/pedidos', async (req, res) => {
     const valPedido = [idDoNovoPedido, tenantId, clienteNome, total, tipoEntrega];
     const resultadoPedido = await client.query(queryPedido, valPedido);
 
-    const queryItem = `
-      INSERT INTO itens_pedido (pedido_id, produto_id, quantidade, preco_unitario) 
-      VALUES ($1, $2, $3, $4)
-    `;
-    for (let item of carrinho) {
-      const valItem = [idDoNovoPedido, item.id, item.quantidade, item.preco];
-      await client.query(queryItem, valItem);
-    }
+
 
     await client.query('COMMIT');
     return res.status(201).json({
