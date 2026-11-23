@@ -165,46 +165,53 @@
   </div>
 
 
-  <!-- ========================================== -->
-  <!-- PAINEL DE ADMINISTRAÇÃO (Oculto por padrão)-->
-  <!-- ========================================== -->
+  <!-- Botão discreto no final da página -->
+  <div style="text-align: center; margin: 30px 0;">
+    <button id="btn-gestor" onclick="alternarPainel()" style="padding: 12px 20px; cursor: pointer;">
+      🔒 Resumo Operacional
+    </button>
+  </div>
+
+  <!-- PAINEL DE ADMINISTRAÇÃO (Oculto por padrão) -->
   <div id="painel-admin" style="display: none; padding: 20px; min-height: 100vh;">
-    <div
-      style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid white; padding-bottom: 10px; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between;
+              align-items: center; border-bottom: 2px solid white;
+              padding-bottom: 10px; margin-bottom: 20px;">
       <h2 style="color: white; margin: 0;">⚙️ Gestão do Cardápio</h2>
       <button class="btn-acao btn-fechar" onclick="fecharPainelAdmin()" style="width: auto; padding: 10px 20px;">
         Sair
       </button>
     </div>
 
-    <div style="background-color: #222; padding: 20px; border-radius: 10px; margin-bottom: 20px;">
-      <h3 style="color: white; text-align: center;">📊 Top 7 Mais Vendidos</h3>
+    <div style="background-color: #222; padding: 20px;
+              border-radius: 10px; margin-bottom: 20px;">
+      <h3 style="color: white; text-align: center;">
+        📊 Top 7 Mais Vendidos
+      </h3>
       <canvas id="graficoVendas" width="400" height="200"></canvas>
 
       <!-- Faturamento e Botão de Zerar -->
-      <div style="margin-top: 40px; text-align: center; border-top: 1px solid #555; padding-top: 20px;">
+      <div style="margin-top: 40px; text-align: center;
+                border-top: 1px solid #555; padding-top: 20px;">
         <h3 style="color: white;">💰 Faturamento Diário</h3>
+        <ul id="listaVendasDiarias" style="color: white; list-style: none; padding: 0;
+               font-size: 18px;"></ul>
 
-        <!-- A lista onde os valores vão aparecer -->
-        <ul id="listaVendasDiarias" style="color: white; list-style: none; padding: 0; font-size: 18px;"></ul>
-
-        <button onclick="zerarVendas()"
-          style="background-color: #ff4444; color: white; padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; margin-top: 20px; font-weight: bold; font-size: 16px;">
+        <button onclick="zerarVendas()" style="background-color: #ff4444; color: white;
+               padding: 12px 24px; border: none; border-radius: 5px;
+               cursor: pointer; margin-top: 20px; font-weight: bold;
+               font-size: 16px;">
           🗑️ Zerar Todo o Histórico de Vendas
         </button>
       </div>
     </div>
 
-    <p style="color: #ccc;">Clique no botão para Ativar ou Desativar os produtos na loja.</p>
+    <p style="color: #ccc;">
+      Clique no botão para Ativar ou Desativar os produtos na loja.
+    </p>
 
-    <!-- Aqui o JavaScript vai injetar a lista completa de produtos -->
+    <!-- Lista completa de produtos -->
     <div id="lista-admin"></div>
-  </div>
-
-  <p style="color: #ccc;">Clique no botão para Ativar ou Desativar os produtos na loja.</p>
-
-  <!-- Aqui o JavaScript vai injetar a lista completa de produtos -->
-  <div id="lista-admin"></div>
   </div>
 
   <!-- Aqui conectamos o arquivo de lógica e ações -->

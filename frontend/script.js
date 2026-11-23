@@ -928,3 +928,20 @@ async function zerarVendas() {
     }
   }
 }
+
+function alternarPainel() {
+  const painel = document.getElementById('painel-admin');
+  const botao = document.getElementById('btn-gestor');
+  const estaOculto = painel.style.display === 'none';
+
+  if (estaOculto) {
+    // Se quiser pedir login/carregar dados ao abrir,
+    // chame sua função de login ou abrirPainelAdmin() aqui
+    painel.style.display = 'block';
+    botao.innerText = '🔼 Ocultar Área do Gestor';
+    painel.scrollIntoView({ behavior: 'smooth' });
+  } else {
+    painel.style.display = 'none';
+    botao.innerText = '🔒 Área do Gestor (Estoque e Vendas)';
+  }
+}
