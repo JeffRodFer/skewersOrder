@@ -192,15 +192,25 @@
 
       <!-- Faturamento e Botão de Zerar -->
       <div style="margin-top: 40px; text-align: center;
-                border-top: 1px solid #555; padding-top: 20px;">
+            border-top: 1px solid #555; padding-top: 20px;">
         <h3 style="color: white;">💰 Faturamento Diário</h3>
+
+        <!-- Calendário adicionado aqui -->
+        <div style="margin: 15px 0;">
+          <label for="filtro-data" style="color: #ccc;">
+            📅 Escolha o dia:
+          </label>
+          <input type="date" id="filtro-data" onchange="buscarVendasPorData()" style="padding: 8px; border-radius: 5px;
+             border: none; margin-left: 8px;">
+        </div>
+
         <ul id="listaVendasDiarias" style="color: white; list-style: none; padding: 0;
-               font-size: 18px;"></ul>
+           font-size: 18px;"></ul>
 
         <button onclick="zerarVendas()" style="background-color: #ff4444; color: white;
-               padding: 12px 24px; border: none; border-radius: 5px;
-               cursor: pointer; margin-top: 20px; font-weight: bold;
-               font-size: 16px;">
+           padding: 12px 24px; border: none; border-radius: 5px;
+           cursor: pointer; margin-top: 20px; font-weight: bold;
+           font-size: 16px;">
           🗑️ Zerar Todo o Histórico de Vendas
         </button>
       </div>

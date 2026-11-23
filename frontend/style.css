@@ -267,3 +267,22 @@ footer {
   text-align: right;
   margin-top: 5px;
 }
+
+#btn-gestor {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border: 2px solid #38bdf8;
+  border-radius: 8px;
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+#btn-gestor:hover {
+  background-color: #38bdf8;
+  color: #0f172a;
+  transform: translateY(-2px);
+}

@@ -945,3 +945,50 @@ function alternarPainel() {
     botao.innerText = '🔒 Área do Gestor (Estoque e Vendas)';
   }
 }
+
+async function buscarVendasPorData() {
+  const input = document.getElementById('filtro-data');
+  const lista = document.getElementById('listaVendasDiarias');
+  const data = input.value;
+
+  if (!data) return;
+
+  lista.innerHTML = '<li>Carregando...</li>';
+
+  try {
+    const base = 'https://skewers-order-backend.vercel.app';
+    const url = `${base}/api/relatorios/dia?data=${data}`;
+    const resp = await fetch(url);
+    const dados = await resp.json();
+
+    if (!Array.isArray(dados) || dados.length === 0) {
+      lista.innerHTML = '<li>Nenhuma venda neste dia.</li>';
+      return;
+    }
+
+    let totalDia = 0;
+    let html = '';
+
+    dados.forEach((linha) => {
+      const valor = Number(linha.faturamento) || 0;
+      totalDia += valor;
+      html += `
+        <li>
+          ${linha.tipo_entrega}: ${linha.total_pedidos} ped.
+          — R$ ${valor.toFixed(2)}
+        </li>
+      `;
+    });
+
+    html += `
+      <li style="margin-top: 10px; color: #38bdf8;">
+        <strong>Total do dia: R$ ${totalDia.toFixed(2)}</strong>
+      </li>
+    `;
+
+    lista.innerHTML = html;
+  } catch (erro) {
+    console.error('Erro ao buscar dia:', erro);
+    lista.innerHTML = '<li>Erro ao carregar dados.</li>';
+  }
+}
