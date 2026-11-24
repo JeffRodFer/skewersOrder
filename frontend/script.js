@@ -930,19 +930,27 @@ async function zerarVendas() {
 }
 
 function alternarPainel() {
-  const painel = document.getElementById('painel-admin');
+  const painel = document.getElementById('painel-operacional');
   const botao = document.getElementById('btn-gestor');
   const estaOculto = painel.style.display === 'none';
 
   if (estaOculto) {
-    // Se quiser pedir login/carregar dados ao abrir,
-    // chame sua função de login ou abrirPainelAdmin() aqui
     painel.style.display = 'block';
-    botao.innerText = '🔼 Ocultar Área do Gestor';
+    botao.innerText = '🔼 Ocultar Resumo Operacional';
+
+    // Calcula o "dia operacional" (vira às 03:00 da manhã)
+    const inputData = document.getElementById('filtro-data');
+    if (!inputData.value) {
+      const tresHorasEmMs = 3 * 60 * 60 * 1000;
+      const dataOperacional = new Date(Date.now() - tresHorasEmMs);
+      inputData.value = dataOperacional.toLocaleDateString('en-CA');
+    }
+
+    buscarVendasPorData();
     painel.scrollIntoView({ behavior: 'smooth' });
   } else {
     painel.style.display = 'none';
-    botao.innerText = '🔒 Área do Gestor (Estoque e Vendas)';
+    botao.innerText = '📊 Ver Resumo Operacional e Vendas';
   }
 }
 
@@ -957,7 +965,7 @@ async function buscarVendasPorData() {
 
   try {
     const base = 'https://skewers-order-backend.vercel.app';
-    const url = `${base}/api/relatorios/dia?data=${data}`;
+    const url = `${base}/api/relatorios/dia/${ID_CLIENTE}?data=${data}`;
     const resp = await fetch(url);
     const dados = await resp.json();
 

@@ -165,15 +165,9 @@
   </div>
 
 
-  <!-- Botão discreto no final da página -->
-  <div style="text-align: center; margin: 30px 0;">
-    <button id="btn-gestor" onclick="alternarPainel()" style="padding: 12px 20px; cursor: pointer;">
-      🔒 Resumo Operacional
-    </button>
-  </div>
-
-  <!-- PAINEL DE ADMINISTRAÇÃO (Oculto por padrão) -->
+  <!-- PAINEL DE ADMINISTRAÇÃO (Abre pelo botão Gerenciar) -->
   <div id="painel-admin" style="display: none; padding: 20px; min-height: 100vh;">
+    <!-- Cabeçalho do Gerenciar -->
     <div style="display: flex; justify-content: space-between;
               align-items: center; border-bottom: 2px solid white;
               padding-bottom: 10px; margin-bottom: 20px;">
@@ -183,46 +177,53 @@
       </button>
     </div>
 
-    <div style="background-color: #222; padding: 20px;
-              border-radius: 10px; margin-bottom: 20px;">
+    <!-- 1º: Lista de produtos e estoque -->
+    <p style="color: #ccc;">
+      Clique no botão para Ativar ou Desativar os produtos na loja.
+    </p>
+    <div id="lista-admin"></div>
+
+    <!-- 2º: Botão retrátil NO FINAL do Gerenciar -->
+    <div style="text-align: center; margin: 30px 0;">
+      <button id="btn-gestor" onclick="alternarPainel()">
+        📊 Ver Resumo Operacional e Vendas
+      </button>
+    </div>
+
+    <!-- 3º: Janela Operacional (Oculta dentro do Gerenciar) -->
+    <div id="painel-operacional" style="display: none; background-color: #222; padding: 20px;
+           border-radius: 10px; margin-bottom: 20px;">
       <h3 style="color: white; text-align: center;">
         📊 Top 7 Mais Vendidos
       </h3>
       <canvas id="graficoVendas" width="400" height="200"></canvas>
 
-      <!-- Faturamento e Botão de Zerar -->
+      <!-- Faturamento, Calendário e Zerar -->
       <div style="margin-top: 40px; text-align: center;
-            border-top: 1px solid #555; padding-top: 20px;">
+                border-top: 1px solid #555; padding-top: 20px;">
         <h3 style="color: white;">💰 Faturamento Diário</h3>
 
-        <!-- Calendário adicionado aqui -->
         <div style="margin: 15px 0;">
           <label for="filtro-data" style="color: #ccc;">
             📅 Escolha o dia:
           </label>
           <input type="date" id="filtro-data" onchange="buscarVendasPorData()" style="padding: 8px; border-radius: 5px;
-             border: none; margin-left: 8px;">
+                 border: none; margin-left: 8px;">
         </div>
 
         <ul id="listaVendasDiarias" style="color: white; list-style: none; padding: 0;
-           font-size: 18px;"></ul>
+               font-size: 18px;"></ul>
 
         <button onclick="zerarVendas()" style="background-color: #ff4444; color: white;
-           padding: 12px 24px; border: none; border-radius: 5px;
-           cursor: pointer; margin-top: 20px; font-weight: bold;
-           font-size: 16px;">
+               padding: 12px 24px; border: none; border-radius: 5px;
+               cursor: pointer; margin-top: 20px; font-weight: bold;
+               font-size: 16px;">
           🗑️ Zerar Todo o Histórico de Vendas
         </button>
       </div>
     </div>
-
-    <p style="color: #ccc;">
-      Clique no botão para Ativar ou Desativar os produtos na loja.
-    </p>
-
-    <!-- Lista completa de produtos -->
-    <div id="lista-admin"></div>
   </div>
+
 
   <!-- Aqui conectamos o arquivo de lógica e ações -->
   <script src="script.js"></script>
