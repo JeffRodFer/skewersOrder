@@ -957,6 +957,7 @@ function alternarPainel() {
     }
 
     buscarVendasPorData();
+    verificarEstoqueCritico(listaGlobalProdutos);
     painel.scrollIntoView({ behavior: 'smooth' });
   } else {
     painel.style.display = 'none';
@@ -1045,4 +1046,48 @@ function enviarFechamentoZap() {
   if (!textoFechamentoZap) return;
   const msg = encodeURIComponent(textoFechamentoZap);
   window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+function verificarEstoqueCritico(listaProdutos) {
+  const caixa = document.getElementById('alerta-estoque');
+  const ul = document.getElementById('lista-estoque-critico');
+  if (!caixa || !ul || !Array.isArray(listaProdutos)) return;
+
+  // Filtra produtos com estoque <= 5
+  const criticos = listaProdutos
+    .filter((p) => {
+      const qtd = Number(p.estoque ?? p.quantidade ?? 99);
+      return qtd <= 5;
+    })
+    .sort((a, b) => {
+      const qa = Number(a.estoque ?? a.quantidade ?? 0);
+      const qb = Number(b.estoque ?? b.quantidade ?? 0);
+      return qa - qb;
+    });
+
+  if (criticos.length === 0) {
+    caixa.style.display = 'none';
+    return;
+  }
+
+  let html = '';
+  criticos.forEach((p) => {
+    const qtd = Number(p.estoque ?? p.quantidade ?? 0);
+    const nome = p.nome || p.titulo || 'Produto';
+
+    if (qtd <= 0) {
+      html += `
+        <li style="margin-bottom: 6px; color: #ff4444;">
+          🔴 <strong>${nome}</strong> — ESGOTADO (0)
+        </li>`;
+    } else {
+      html += `
+        <li style="margin-bottom: 6px; color: #fbbf24;">
+          🟡 <strong>${nome}</strong> — restam ${qtd} un.
+        </li>`;
+    }
+  });
+
+  ul.innerHTML = html;
+  caixa.style.display = 'block';
 }
