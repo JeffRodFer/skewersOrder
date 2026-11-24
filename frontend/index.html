@@ -212,14 +212,27 @@
       <!-- Faturamento, Calendário e Zerar -->
       <div style="margin-top: 40px; text-align: center;
                 border-top: 1px solid #555; padding-top: 20px;">
-        <h3 style="color: white;">💰 Faturamento Diário</h3>
+        <h3 style="color: white;">💰 Faturamento por Período</h3>
 
-        <div style="margin: 15px 0;">
-          <label for="filtro-data" style="color: #ccc;">
-            📅 Escolha o dia:
-          </label>
-          <input type="date" id="filtro-data" onchange="buscarVendasPorData()" style="padding: 8px; border-radius: 5px;
-                 border: none; margin-left: 8px;">
+        <div style="margin: 15px 0; display: flex;
+            flex-wrap: wrap; gap: 10px;
+            justify-content: center;
+            align-items: center;">
+          <div>
+            <label for="filtro-inicio" style="color: #ccc;">
+              De:
+            </label>
+            <input type="date" id="filtro-inicio" onchange="buscarVendasPorPeriodo()" style="padding: 8px; border-radius: 5px;
+                  border: none; margin-left: 4px;">
+          </div>
+
+          <div>
+            <label for="filtro-fim" style="color: #ccc;">
+              Até:
+            </label>
+            <input type="date" id="filtro-fim" onchange="buscarVendasPorPeriodo()" style="padding: 8px; border-radius: 5px;
+                  border: none; margin-left: 4px;">
+          </div>
         </div>
 
         <ul id="listaVendasDiarias" style="color: white; list-style: none; padding: 0;
