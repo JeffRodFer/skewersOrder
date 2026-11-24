@@ -825,7 +825,7 @@ function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
     meuGraficoVendas.destroy();
   }
 
-  // 3. Atribui a criação do gráfico à variável (AGORA NA HORIZONTAL)
+  // 3. Atribui a criação do gráfico à variável (HORIZONTAL)
   meuGraficoVendas = new Chart(ctx, {
     type: 'bar',
     data: {
@@ -838,14 +838,24 @@ function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
       }]
     },
     options: {
-      indexAxis: 'y', // <-- A MÁGICA ACONTECE AQUI (Deita o gráfico)
+      indexAxis: 'y', // Deita o gráfico
       responsive: true,
       plugins: {
-        legend: { labels: { color: 'white' } }
+        legend: {
+          labels: { color: 'white' }
+        }
       },
       scales: {
-        x: { ticks: { color: 'white' }, beginAtZero: true }, // O eixo X agora mostra os números
-        y: { ticks: { color: 'white' } }                     // O eixo Y agora mostra os nomes em pé
+        x: {
+          ticks: { color: 'white' },
+          beginAtZero: true
+        },
+        y: {
+          ticks: {
+            color: 'white',
+            autoSkip: false // Mostra os 7 nomes
+          }
+        }
       }
     }
   });
