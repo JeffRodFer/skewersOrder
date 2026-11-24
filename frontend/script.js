@@ -964,14 +964,18 @@ function alternarPainel() {
   }
 }
 
+let textoFechamentoZap = '';
+
 async function buscarVendasPorData() {
   const input = document.getElementById('filtro-data');
   const lista = document.getElementById('listaVendasDiarias');
+  const btnZap = document.getElementById('btn-zap-fechamento');
   const data = input.value;
 
   if (!data) return;
 
   lista.innerHTML = '<li>Carregando...</li>';
+  if (btnZap) btnZap.style.display = 'none';
 
   try {
     const base = 'https://skewers-order-backend.vercel.app';
@@ -981,32 +985,64 @@ async function buscarVendasPorData() {
 
     if (!Array.isArray(dados) || dados.length === 0) {
       lista.innerHTML = '<li>Nenhuma venda neste dia.</li>';
+      textoFechamentoZap = '';
       return;
     }
 
     let totalDia = 0;
+    let totalPedidos = 0;
     let html = '';
+    let linhasZap = '';
 
     dados.forEach((linha) => {
       const valor = Number(linha.faturamento) || 0;
+      const qtd = Number(linha.total_pedidos) || 0;
       totalDia += valor;
+      totalPedidos += qtd;
+
       html += `
         <li>
-          ${linha.tipo_entrega}: ${linha.total_pedidos} ped.
+          ${linha.tipo_entrega}: ${qtd} ped.
           — R$ ${valor.toFixed(2)}
         </li>
       `;
+      linhasZap += `• ${linha.tipo_entrega}: `;
+      linhasZap += `${qtd} ped. (R$ ${valor.toFixed(2)})\n`;
     });
 
+    const ticketMedio = totalPedidos > 0
+      ? totalDia / totalPedidos
+      : 0;
+
     html += `
-      <li style="margin-top: 10px; color: #38bdf8;">
-        <strong>Total do dia: R$ ${totalDia.toFixed(2)}</strong>
+      <li style="margin-top: 12px; color: #38bdf8;">
+        <strong>Total: R$ ${totalDia.toFixed(2)}</strong>
+        (${totalPedidos} pedidos)
+      </li>
+      <li style="color: #fbbf24; font-size: 16px;">
+        Ticket Médio: R$ ${ticketMedio.toFixed(2)}
       </li>
     `;
 
     lista.innerHTML = html;
+
+    const dataBR = data.split('-').reverse().join('/');
+    textoFechamentoZap =
+      `📊 *FECHAMENTO DO DIA (${dataBR})*\n\n` +
+      `${linhasZap}\n` +
+      `📦 *Pedidos:* ${totalPedidos}\n` +
+      `🎯 *Ticket Médio:* R$ ${ticketMedio.toFixed(2)}\n` +
+      `💰 *TOTAL:* R$ ${totalDia.toFixed(2)}`;
+
+    if (btnZap) btnZap.style.display = 'inline-block';
   } catch (erro) {
     console.error('Erro ao buscar dia:', erro);
     lista.innerHTML = '<li>Erro ao carregar dados.</li>';
   }
+}
+
+function enviarFechamentoZap() {
+  if (!textoFechamentoZap) return;
+  const msg = encodeURIComponent(textoFechamentoZap);
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
 }
