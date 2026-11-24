@@ -948,13 +948,16 @@ function alternarPainel() {
     painel.style.display = 'block';
     botao.innerText = '🔼 Ocultar Resumo Operacional';
 
-    // Calcula o "dia operacional" (vira às 03:00 da manhã)
-    const inputData = document.getElementById('filtro-data');
-    if (!inputData.value) {
-      const tresHorasEmMs = 3 * 60 * 60 * 1000;
-      const dataOperacional = new Date(Date.now() - tresHorasEmMs);
-      inputData.value = dataOperacional.toLocaleDateString('en-CA');
-    }
+    // Dia operacional (vira às 03:00 da manhã)
+    const tresHoras = 3 * 60 * 60 * 1000;
+    const hojeOp = new Date(Date.now() - tresHoras)
+      .toLocaleDateString('en-CA');
+
+    const inputIni = document.getElementById('filtro-inicio');
+    const inputFim = document.getElementById('filtro-fim');
+
+    if (!inputIni.value) inputIni.value = hojeOp;
+    if (!inputFim.value) inputFim.value = hojeOp;
 
     buscarVendasPorData();
     verificarEstoqueCritico(listaGlobalProdutos);
@@ -968,29 +971,37 @@ function alternarPainel() {
 let textoFechamentoZap = '';
 
 async function buscarVendasPorData() {
-  const input = document.getElementById('filtro-data');
+  const inicio = document.getElementById('filtro-inicio').value;
+  const fim = document.getElementById('filtro-fim').value;
   const lista = document.getElementById('listaVendasDiarias');
   const btnZap = document.getElementById('btn-zap-fechamento');
-  const data = input.value;
 
-  if (!data) return;
+  if (!inicio || !fim) return;
+
+  if (inicio > fim) {
+    lista.innerHTML = '<li>Data inicial maior que a final.</li>';
+    if (btnZap) btnZap.style.display = 'none';
+    return;
+  }
 
   lista.innerHTML = '<li>Carregando...</li>';
   if (btnZap) btnZap.style.display = 'none';
 
   try {
     const base = 'https://skewers-order-backend.vercel.app';
-    const url = `${base}/api/relatorios/dia/${ID_CLIENTE}?data=${data}`;
+    const rota = `/api/relatorios/periodo/${ID_CLIENTE}`;
+    const url = `${base}${rota}?inicio=${inicio}&fim=${fim}`;
+
     const resp = await fetch(url);
     const dados = await resp.json();
 
     if (!Array.isArray(dados) || dados.length === 0) {
-      lista.innerHTML = '<li>Nenhuma venda neste dia.</li>';
+      lista.innerHTML = '<li>Nenhuma venda neste período.</li>';
       textoFechamentoZap = '';
       return;
     }
 
-    let totalDia = 0;
+    let totalGeral = 0;
     let totalPedidos = 0;
     let html = '';
     let linhasZap = '';
@@ -998,7 +1009,7 @@ async function buscarVendasPorData() {
     dados.forEach((linha) => {
       const valor = Number(linha.faturamento) || 0;
       const qtd = Number(linha.total_pedidos) || 0;
-      totalDia += valor;
+      totalGeral += valor;
       totalPedidos += qtd;
 
       html += `
@@ -1011,33 +1022,38 @@ async function buscarVendasPorData() {
       linhasZap += `${qtd} ped. (R$ ${valor.toFixed(2)})\n`;
     });
 
-    const ticketMedio = totalPedidos > 0
-      ? totalDia / totalPedidos
+    const ticket = totalPedidos > 0
+      ? totalGeral / totalPedidos
       : 0;
 
     html += `
       <li style="margin-top: 12px; color: #38bdf8;">
-        <strong>Total: R$ ${totalDia.toFixed(2)}</strong>
+        <strong>Total: R$ ${totalGeral.toFixed(2)}</strong>
         (${totalPedidos} pedidos)
       </li>
       <li style="color: #fbbf24; font-size: 16px;">
-        Ticket Médio: R$ ${ticketMedio.toFixed(2)}
+        Ticket Médio: R$ ${ticket.toFixed(2)}
       </li>
     `;
 
     lista.innerHTML = html;
 
-    const dataBR = data.split('-').reverse().join('/');
+    const iniBR = inicio.split('-').reverse().join('/');
+    const fimBR = fim.split('-').reverse().join('/');
+    const titulo = inicio === fim
+      ? `FECHAMENTO (${iniBR})`
+      : `FECHAMENTO (${iniBR} a ${fimBR})`;
+
     textoFechamentoZap =
-      `📊 *FECHAMENTO DO DIA (${dataBR})*\n\n` +
+      `📊 *${titulo}*\n\n` +
       `${linhasZap}\n` +
       `📦 *Pedidos:* ${totalPedidos}\n` +
-      `🎯 *Ticket Médio:* R$ ${ticketMedio.toFixed(2)}\n` +
-      `💰 *TOTAL:* R$ ${totalDia.toFixed(2)}`;
+      `🎯 *Ticket Médio:* R$ ${ticket.toFixed(2)}\n` +
+      `💰 *TOTAL:* R$ ${totalGeral.toFixed(2)}`;
 
     if (btnZap) btnZap.style.display = 'inline-block';
   } catch (erro) {
-    console.error('Erro ao buscar dia:', erro);
+    console.error('Erro ao buscar período:', erro);
     lista.innerHTML = '<li>Erro ao carregar dados.</li>';
   }
 }
