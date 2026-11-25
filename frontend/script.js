@@ -974,18 +974,21 @@ async function buscarVendasPorData() {
   const inicio = document.getElementById('filtro-inicio').value;
   const fim = document.getElementById('filtro-fim').value;
   const lista = document.getElementById('listaVendasDiarias');
+  const listaDet = document.getElementById('listaPedidosDetalhados');
   const btnZap = document.getElementById('btn-zap-fechamento');
 
   if (!inicio || !fim) return;
 
   if (inicio > fim) {
     lista.innerHTML = '<li>Data inicial maior que a final.</li>';
+    if (listaDet) listaDet.innerHTML = '';
     if (btnZap) btnZap.style.display = 'none';
     return;
   }
 
   lista.innerHTML = '<li>Carregando...</li>';
   if (btnZap) btnZap.style.display = 'none';
+  buscarPedidosDetalhados(inicio, fim);
 
   try {
     const base = 'https://skewers-order-backend.vercel.app';
@@ -1106,4 +1109,68 @@ function verificarEstoqueCritico(listaProdutos) {
 
   ul.innerHTML = html;
   caixa.style.display = 'block';
+}
+
+async function buscarPedidosDetalhados(inicio, fim) {
+  const ul = document.getElementById('listaPedidosDetalhados');
+  if (!ul) return;
+
+  ul.innerHTML = '<li>Carregando pedidos...</li>';
+
+  try {
+    const base = 'https://skewers-order-backend.vercel.app';
+    const rota = `/api/relatorios/pedidos/${ID_CLIENTE}`;
+    const url = `${base}${rota}?inicio=${inicio}&fim=${fim}`;
+
+    const resp = await fetch(url);
+    const pedidos = await resp.json();
+
+    if (!Array.isArray(pedidos) || pedidos.length === 0) {
+      ul.innerHTML = '<li>Nenhum pedido detalhado.</li>';
+      return;
+    }
+
+    ul.innerHTML = pedidos
+      .map((p) => {
+        const valor = Number(p.total || 0).toFixed(2);
+        const nome = p.cliente_nome || 'Cliente';
+        const tipo = p.tipo_entrega || 'Pedido';
+        const hora = p.hora_local
+          ? new Date(p.hora_local).toLocaleTimeString('pt-BR', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+          : '--:--';
+
+        const extras = [];
+        if (p.farofa === 'Sim') extras.push('Farofa');
+        if (p.vinagrete === 'Sim') extras.push('Vinagrete');
+        const txtExtras = extras.length > 0
+          ? ` (${extras.join(' + ')})`
+          : '';
+
+        const obs = p.observacoes
+          ? `<br><small style="color: #fbbf24;">Obs: ${p.observacoes}</small>`
+          : '';
+
+        return `
+          <li style="padding: 10px; border-bottom: 1px solid #444;">
+            <strong>${hora}</strong> — ${nome}
+            <span style="color: #38bdf8;">[${tipo}]</span>
+            <strong style="float: right; color: #4ade80;">
+              R$ ${valor}
+            </strong>
+            <br>
+            <small style="color: #aaa;">
+              Acompanhamentos:${txtExtras || ' Nenhum'}
+            </small>
+            ${obs}
+          </li>
+        `;
+      })
+      .join('');
+  } catch (erro) {
+    console.error('Erro ao carregar pedidos:', erro);
+    ul.innerHTML = '<li>Erro ao carregar pedidos.</li>';
+  }
 }
