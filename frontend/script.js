@@ -1071,9 +1071,17 @@ async function buscarVendasPorData() {
   }
 }
 
-function enviarFechamentoZap() {
-  if (!textoFechamentoZap) return;
-  const msg = encodeURIComponent(textoFechamentoZap);
+function enviarFechamentoZap(tipo = 'resumo') {
+  const texto = tipo === 'completo'
+    ? textoZapCompleto
+    : textoZapResumo;
+
+  if (!texto) {
+    alert('Relatório ainda não carregou.');
+    return;
+  }
+
+  const msg = encodeURIComponent(texto);
   window.open(`https://wa.me/?text=${msg}`, '_blank');
 }
 
