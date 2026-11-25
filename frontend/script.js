@@ -1,6 +1,9 @@
 // === 1. IDENTIDADE DO CLIENTE 2 ===
 const ID_CLIENTE = 2;
 
+let textoZapResumo = '';
+let textoZapCompleto = '';
+
 // ATENÇÃO: Esta linha deve ficar solta no topo do arquivo script.js!
 let credenciaisAdmin = { user: '', pass: '' };
 let listaGlobalProdutos = [];
@@ -975,19 +978,24 @@ async function buscarVendasPorData() {
   const fim = document.getElementById('filtro-fim').value;
   const lista = document.getElementById('listaVendasDiarias');
   const listaDet = document.getElementById('listaPedidosDetalhados');
-  const btnZap = document.getElementById('btn-zap-fechamento');
+  const btnRes = document.getElementById('btn-zap-resumo');
+  const btnComp = document.getElementById('btn-zap-completo');
 
   if (!inicio || !fim) return;
 
   if (inicio > fim) {
     lista.innerHTML = '<li>Data inicial maior que a final.</li>';
     if (listaDet) listaDet.innerHTML = '';
-    if (btnZap) btnZap.style.display = 'none';
+    if (btnRes) btnRes.style.display = 'none';
+    if (btnComp) btnComp.style.display = 'none';
+    textoZapResumo = '';
+    textoZapCompleto = '';
     return;
   }
 
   lista.innerHTML = '<li>Carregando...</li>';
-  if (btnZap) btnZap.style.display = 'none';
+  if (btnRes) btnRes.style.display = 'none';
+  if (btnComp) btnComp.style.display = 'none';
   buscarPedidosDetalhados(inicio, fim);
 
   try {
@@ -1000,7 +1008,8 @@ async function buscarVendasPorData() {
 
     if (!Array.isArray(dados) || dados.length === 0) {
       lista.innerHTML = '<li>Nenhuma venda neste período.</li>';
-      textoFechamentoZap = '';
+      textoZapResumo = '';
+      textoZapCompleto = '';
       return;
     }
 
@@ -1047,14 +1056,15 @@ async function buscarVendasPorData() {
       ? `FECHAMENTO (${iniBR})`
       : `FECHAMENTO (${iniBR} a ${fimBR})`;
 
-    textoFechamentoZap =
-      `📊 *${titulo}*\n\n` +
+    textoZapResumo =
+      `📊 *${titulo} — RESUMO*\n\n` +
       `${linhasZap}\n` +
       `📦 *Pedidos:* ${totalPedidos}\n` +
       `🎯 *Ticket Médio:* R$ ${ticket.toFixed(2)}\n` +
       `💰 *TOTAL:* R$ ${totalGeral.toFixed(2)}`;
 
-    if (btnZap) btnZap.style.display = 'inline-block';
+    if (btnRes) btnRes.style.display = 'inline-block';
+    if (btnComp) btnComp.style.display = 'inline-block';
   } catch (erro) {
     console.error('Erro ao buscar período:', erro);
     lista.innerHTML = '<li>Erro ao carregar dados.</li>';

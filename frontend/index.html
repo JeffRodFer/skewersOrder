@@ -249,21 +249,25 @@
                    max-width: 520px; margin: 0 auto 15px auto;">
         </ul>
 
-        <button id="btn-zap-fechamento" onclick="enviarFechamentoZap()" style="background-color: #25D366; color: white;
-         padding: 12px 24px; border: none;
-         border-radius: 5px; cursor: pointer;
-         margin-top: 15px; font-weight: bold;
-         font-size: 16px; display: none;">
-          📲 Enviar Fechamento no WhatsApp
-        </button>
+        <div style="margin-top: 15px; display: flex;
+            flex-wrap: wrap; gap: 10px;
+            justify-content: center;">
+          <button id="btn-zap-resumo" onclick="enviarFechamentoZap('resumo')" style="background-color: #25D366; color: white;
+                 padding: 12px 18px; border: none;
+                 border-radius: 5px; cursor: pointer;
+                 font-weight: bold; font-size: 15px;
+                 display: none;">
+            📲 WhatsApp Resumido
+          </button>
 
-        <button id="btn-zap-fechamento" onclick="enviarFechamentoZap()" style="background-color: #25D366; color: white;
-         padding: 12px 24px; border: none;
-         border-radius: 5px; cursor: pointer;
-         margin-top: 15px; font-weight: bold;
-         font-size: 16px; display: none;">
-          📲 Enviar Fechamento no WhatsApp
-        </button>
+          <button id="btn-zap-completo" onclick="enviarFechamentoZap('completo')" style="background-color: #128C7E; color: white;
+                 padding: 12px 18px; border: none;
+                 border-radius: 5px; cursor: pointer;
+                 font-weight: bold; font-size: 15px;
+                 display: none;">
+            📋 WhatsApp Completo
+          </button>
+        </div>
 
         <button onclick="zerarVendas()" style="background-color: #ff4444; color: white;
                padding: 12px 24px; border: none; border-radius: 5px;
