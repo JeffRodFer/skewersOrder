@@ -1145,6 +1145,7 @@ async function buscarPedidosDetalhados(inicio, fim) {
 
     if (!Array.isArray(pedidos) || pedidos.length === 0) {
       ul.innerHTML = '<li>Nenhum pedido detalhado.</li>';
+      textoZapCompleto = '';
       return;
     }
 
@@ -1154,10 +1155,10 @@ async function buscarPedidosDetalhados(inicio, fim) {
         const nome = p.cliente_nome || 'Cliente';
         const tipo = p.tipo_entrega || 'Pedido';
         const hora = p.hora_local
-          ? new Date(p.hora_local).toLocaleTimeString('pt-BR', {
-            hour: '2-digit',
-            minute: '2-digit'
-          })
+          ? new Date(p.hora_local).toLocaleTimeString(
+              'pt-BR',
+              { hour: '2-digit', minute: '2-digit' }
+            )
           : '--:--';
 
         const extras = [];
@@ -1187,6 +1188,37 @@ async function buscarPedidosDetalhados(inicio, fim) {
         `;
       })
       .join('');
+
+    let blocoPedidos = '\n\n🧾 *PEDIDOS DETALHADOS:*\n';
+
+    pedidos.forEach((p) => {
+      const valor = Number(p.total || 0).toFixed(2);
+      const nome = p.cliente_nome || 'Cliente';
+      const tipo = p.tipo_entrega || 'Pedido';
+      const hora = p.hora_local
+        ? new Date(p.hora_local).toLocaleTimeString(
+            'pt-BR',
+            { hour: '2-digit', minute: '2-digit' }
+          )
+        : '--:--';
+
+      const extras = [];
+      if (p.farofa === 'Sim') extras.push('Farofa');
+      if (p.vinagrete === 'Sim') extras.push('Vinagrete');
+      const extraTxt = extras.length
+        ? ` | ${extras.join(' + ')}`
+        : '';
+
+      const obsTxt = p.observacoes
+        ? `\n   _Obs: ${p.observacoes}_`
+        : '';
+
+      blocoPedidos +=
+        `\n• *${hora}* — ${nome} (${tipo})${extraTxt}` +
+        `\n  *Valor:* R$ ${valor}${obsTxt}`;
+    });
+
+    textoZapCompleto = `${textoZapResumo}${blocoPedidos}`;
   } catch (erro) {
     console.error('Erro ao carregar pedidos:', erro);
     ul.innerHTML = '<li>Erro ao carregar pedidos.</li>';
