@@ -917,28 +917,45 @@ async function carregarVendasDiarias() {
   }
 }
 
-// 2. Função acionada pelo botão vermelho
+// 2. Função acionada pelo botão vermelho (com dupla trava)
 async function zerarVendas() {
-  // Trava de segurança para evitar cliques acidentais
-  const confirmacao = confirm("CUIDADO! Tem certeza que deseja apagar TODO o histórico de vendas? O gráfico e o faturamento voltarão a zero.");
+  const textoConfirmacao = prompt(
+    'CUIDADO! Isso vai apagar TODO o histórico de vendas.\n' +
+    'O gráfico e o faturamento voltarão a zero.\n\n' +
+    'Digite ZERAR (em maiúsculas) para confirmar:'
+  );
 
-  if (confirmacao) {
-    try {
-      const resposta = await fetch(`https://skewers-order-backend.vercel.app/api/relatorios/zerar/${usuario_id_da_loja}`, {
-        method: 'DELETE'
-      });
+  if (textoConfirmacao !== 'ZERAR') {
+    alert('Ação cancelada. Nenhum dado foi apagado.');
+    return;
+  }
 
-      if (resposta.ok) {
-        alert("Histórico de vendas zerado com sucesso!");
-        // Atualiza a tela automaticamente apagando os dados antigos
+  try {
+    const base = 'https://skewers-order-backend.vercel.app';
+    const url = `${base}/api/relatorios/zerar/${usuario_id_da_loja}`;
+
+    const resposta = await fetch(url, {
+      method: 'DELETE'
+    });
+
+    if (resposta.ok) {
+      alert('Histórico de vendas zerado com sucesso!');
+      // Atualiza a tela automaticamente apagando os dados antigos
+      if (typeof carregarGraficoVendas === 'function') {
         carregarGraficoVendas();
-        carregarVendasDiarias();
-      } else {
-        alert("Falha ao zerar. Tente novamente.");
       }
-    } catch (erro) {
-      console.error("Erro ao limpar dados:", erro);
+      if (typeof carregarVendasDiarias === 'function') {
+        carregarVendasDiarias();
+      }
+      if (typeof buscarVendasPorData === 'function') {
+        buscarVendasPorData();
+      }
+    } else {
+      alert('Falha ao zerar. Tente novamente.');
     }
+  } catch (erro) {
+    console.error('Erro ao limpar dados:', erro);
+    alert('Erro de conexão ao tentar zerar os dados.');
   }
 }
 
@@ -1156,9 +1173,9 @@ async function buscarPedidosDetalhados(inicio, fim) {
         const tipo = p.tipo_entrega || 'Pedido';
         const hora = p.hora_local
           ? new Date(p.hora_local).toLocaleTimeString(
-              'pt-BR',
-              { hour: '2-digit', minute: '2-digit' }
-            )
+            'pt-BR',
+            { hour: '2-digit', minute: '2-digit' }
+          )
           : '--:--';
 
         const extras = [];
@@ -1197,9 +1214,9 @@ async function buscarPedidosDetalhados(inicio, fim) {
       const tipo = p.tipo_entrega || 'Pedido';
       const hora = p.hora_local
         ? new Date(p.hora_local).toLocaleTimeString(
-            'pt-BR',
-            { hour: '2-digit', minute: '2-digit' }
-          )
+          'pt-BR',
+          { hour: '2-digit', minute: '2-digit' }
+        )
         : '--:--';
 
       const extras = [];
