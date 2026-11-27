@@ -653,56 +653,54 @@ function verificarEntrega() {
 // 2. O MOTOR PRINCIPAL (FINALIZAR PEDIDO)
 // ==========================================
 async function finalizarPedido() {
-
-  let totalItens = Object.values(carrinho).reduce((soma, qtd) => soma + qtd, 0);
+  const totalItens = Object.values(carrinho || {}).reduce((soma, qtd) => soma + qtd, 0);
   if (totalItens === 0) {
     return alert("Seu carrinho está vazio! Escolha alguns espetinhos primeiro.");
   }
 
-  // ====================================================
-  // NOVIDADE: TRAVA VISUAL DE DUPLO CLIQUE
-  // ====================================================
   const btnEnviar = document.querySelector('.btn-whatsapp');
-  const textoOriginal = btnEnviar.innerText; // Guarda o texto "Enviar Pedido"
+  const textoOriginal = btnEnviar.innerText;
 
   btnEnviar.innerText = "Enviando... Aguarde ⏳";
-  btnEnviar.disabled = true;       // Impede novos cliques
-  btnEnviar.style.opacity = "0.6"; // Deixa o botão meio transparente
-  // ====================================================
+  btnEnviar.disabled = true;
+  btnEnviar.style.opacity = "0.6";
 
-  const farofaEscolhida = document.querySelector('input[name="farofa"]:checked').value;
-  const vinagreteEscolhido = document.querySelector('input[name="vinagrete"]:checked').value;
-  const obsDigitadas = document.getElementById('obs-pedido').value;
+  const farofaEscolhida = document.querySelector('input[name="farofa"]:checked')?.value || "Não";
+  const vinagreteEscolhido = document.querySelector('input[name="vinagrete"]:checked')?.value || "Não";
+  const obsDigitadas = (document.getElementById('obs-pedido')?.value || "").slice(0, 90);
+  const formaPagamentoEscolhida = document.querySelector('input[name="pagamento"]:checked')?.value || "Não informado";
 
-  let listaParaBackend = [];
+  const listaParaBackend = [];
   let subtotal = 0;
 
-  for (let idProduto in carrinho) {
-    // ... (Mantém o mesmo loop do carrinho) ...
-    let qtd = carrinho[idProduto];
+  for (const idProduto in carrinho) {
+    const qtd = Number(carrinho[idProduto]) || 0;
     if (qtd > 0) {
-      let prod = listaGlobalProdutos.find(p => p.id == idProduto);
-      subtotal += parseFloat(prod.preco) * qtd;
-      listaParaBackend.push({
-        id: prod.id,
-        quantidade: qtd,
-        preco: parseFloat(prod.preco),
-        nome: prod.nome
-      });
+      const prod = listaGlobalProdutos.find(p => String(p.id) === String(idProduto));
+      if (prod) {
+        const precoUnit = parseFloat(prod.preco) || 0;
+        subtotal += precoUnit * qtd;
+        listaParaBackend.push({
+          id: prod.id,
+          quantidade: qtd,
+          preco: precoUnit,
+          nome: prod.nome
+        });
+      }
     }
   }
 
-  let taxaDeEntrega = 0.00;
-  if (dadosCliente.tipo === "entregar") {
-    taxaDeEntrega = 5.00;
-  }
-  let totalGeral = subtotal + taxaDeEntrega;
+  const tipoNormalizado = String(dadosCliente.tipo || "").toLowerCase();
+  const ehEntrega = tipoNormalizado === "entregar" || tipoNormalizado === "entrega";
+  const taxaDeEntrega = ehEntrega ? 5.00 : 0.00;
+  const totalGeral = subtotal + taxaDeEntrega;
 
   const pacoteDeDados = {
     tenantId: ID_CLIENTE,
     clienteNome: dadosCliente.nome,
     total: totalGeral,
-    tipoEntrega: dadosCliente.tipo,
+    tipoEntrega: ehEntrega ? "Entrega" : "Retira",
+    formaPagamento: formaPagamentoEscolhida,
     carrinho: listaParaBackend,
     farofa: farofaEscolhida,
     vinagrete: vinagreteEscolhido,
@@ -723,16 +721,11 @@ async function finalizarPedido() {
     const pedidoSalvo = await resposta.json();
     console.log("Banco de dados OK. UUID gerado:", pedidoSalvo.id);
 
-    // O sucesso recarrega a página no final do zap, então não precisamos destravar o botão aqui.
     enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega);
-
   } catch (erro) {
     console.error("Erro no fechamento do pedido:", erro);
     alert("Ops! Houve uma falha de conexão. Tente novamente.");
 
-    // ====================================================
-    // DESTRAVA O BOTÃO EM CASO DE ERRO PARA NOVA TENTATIVA
-    // ====================================================
     btnEnviar.innerText = textoOriginal;
     btnEnviar.disabled = false;
     btnEnviar.style.opacity = "1";
