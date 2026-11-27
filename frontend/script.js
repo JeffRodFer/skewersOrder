@@ -912,43 +912,40 @@ async function carregarVendasDiarias() {
 
 // 2. Função acionada pelo botão vermelho (com dupla trava)
 async function zerarVendas() {
-  const textoConfirmacao = prompt(
-    'CUIDADO! Isso vai apagar TODO o histórico de vendas.\n' +
-    'O gráfico e o faturamento voltarão a zero.\n\n' +
-    'Digite ZERAR (em maiúsculas) para confirmar:'
-  );
-
-  if (textoConfirmacao !== 'ZERAR') {
-    alert('Ação cancelada. Nenhum dado foi apagado.');
+  const textoDigitado = prompt('Digite ZERAR para apagar o histórico de vendas:');
+  if (textoDigitado !== 'ZERAR') {
+    alert('Ação cancelada.');
     return;
   }
 
   try {
     const base = 'https://skewers-order-backend.vercel.app';
-    const url = `${base}/api/relatorios/zerar/${usuario_id_da_loja}`;
+    const url = `${base}/api/relatorios/zerar/${ID_CLIENTE}`;
 
     const resposta = await fetch(url, {
       method: 'DELETE'
     });
 
-    if (resposta.ok) {
-      alert('Histórico de vendas zerado com sucesso!');
-      // Atualiza a tela automaticamente apagando os dados antigos
-      if (typeof carregarGraficoVendas === 'function') {
-        carregarGraficoVendas();
-      }
-      if (typeof carregarVendasDiarias === 'function') {
-        carregarVendasDiarias();
-      }
-      if (typeof buscarVendasPorData === 'function') {
-        buscarVendasPorData();
-      }
-    } else {
-      alert('Falha ao zerar. Tente novamente.');
+    if (!resposta.ok) {
+      throw new Error(`Servidor respondeu com HTTP ${resposta.status}`);
+    }
+
+    await resposta.json().catch(() => ({}));
+
+    alert('Histórico zerado com sucesso!');
+
+    if (typeof carregarGrafico === 'function') {
+      await carregarGrafico();
+    }
+    if (typeof carregarVendas === 'function') {
+      await carregarVendas();
+    }
+    if (typeof buscarVendas === 'function') {
+      await buscarVendas();
     }
   } catch (erro) {
-    console.error('Erro ao limpar dados:', erro);
-    alert('Erro de conexão ao tentar zerar os dados.');
+    console.error('Erro detalhado ao zerar vendas:', erro);
+    alert(`Falha ao concluir a limpeza: ${erro.message}`);
   }
 }
 
