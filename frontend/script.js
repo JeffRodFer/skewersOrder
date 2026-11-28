@@ -430,7 +430,11 @@ function enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega, confi
   texto += `*💰 TOTAL GERAL: R$ ${totalFormatado}*\n`;
 
   const chavePix =
-    (configLoja && (configLoja.pixKey || configLoja.pix_key || configLoja.chavePix)) ||
+    (configLoja &&
+      (configLoja.pixKey ||
+        configLoja.pix_key ||
+        configLoja.chavePix ||
+        configLoja.chave_pix)) ||
     '';
 
   if (chavePix) {
@@ -703,8 +707,16 @@ function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
       },
       scales: {
         x: {
-          ticks: { color: 'white' },
-          beginAtZero: true
+          beginAtZero: true,
+          suggestedMax: Math.max(4, ...(quantidadesVendidas || [0])),
+          ticks: {
+            color: 'white',
+            stepSize: 1,
+            precision: 0,
+            callback: function (valor) {
+              return Number.isInteger(valor) ? valor : null;
+            }
+          }
         },
         y: {
           ticks: {
