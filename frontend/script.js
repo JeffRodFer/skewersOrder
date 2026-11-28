@@ -1242,3 +1242,5 @@ async function finalizarPedido() {
       ul.innerHTML = '<li>Erro ao carregar pedidos.</li>';
     }
   }
+
+}
