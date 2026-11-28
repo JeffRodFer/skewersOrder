@@ -429,8 +429,12 @@ function enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega, confi
   const totalFormatado = Number(pacoteDeDados.total).toFixed(2).replace('.', ',');
   texto += `*💰 TOTAL GERAL: R$ ${totalFormatado}*\n`;
 
-  if (configLoja && configLoja.pixKey) {
-    texto += `\n*🔑 Chave Pix:* ${configLoja.pixKey}\n`;
+  const chavePix =
+    (configLoja && (configLoja.pixKey || configLoja.pix_key || configLoja.chavePix)) ||
+    '';
+
+  if (chavePix) {
+    texto += `\n*🔑 Chave Pix:* ${chavePix}\n`;
   }
 
   const numeroDestino =
