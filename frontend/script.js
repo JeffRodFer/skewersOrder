@@ -721,7 +721,10 @@ async function finalizarPedido() {
     const pedidoSalvo = await resposta.json();
     console.log("Banco de dados OK. UUID gerado:", pedidoSalvo.id);
 
-    enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega);
+    const respConfig = await fetch('https://skewers-order-backend.vercel.app/api/config-pedido');
+    const configLoja = respConfig.ok ? await respConfig.json() : {};
+
+    enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega, configLoja);
   } catch (erro) {
     console.error("Erro no fechamento do pedido:", erro);
     alert("Ops! Houve uma falha de conexão. Tente novamente.");
@@ -730,322 +733,330 @@ async function finalizarPedido() {
     btnEnviar.disabled = false;
     btnEnviar.style.opacity = "1";
   }
-}
 
-// ==========================================
-// 3. A IMPRESSORA DA COZINHA (WHATSAPP)
-// ==========================================
-function enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega) {
+  // ==========================================
+  // 3. A IMPRESSORA DA COZINHA (WHATSAPP)
+  // ==========================================
+  function enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega, configLoja = {}) {
+    const idTexto = pedidoSalvo && pedidoSalvo.id ? String(pedidoSalvo.id) : '';
+    const protocolo = idTexto ? idTexto.substring(0, 6).toUpperCase() : 'NOVO';
 
-  const protocolo = pedidoSalvo.id.substring(0, 6).toUpperCase();
+    let texto = `*NOVO PEDIDO - #${protocolo}*\n\n`;
+    texto += `*Cliente:* ${pacoteDeDados.clienteNome}\n`;
 
-  let texto = `*NOVO PEDIDO - #${protocolo}*\n\n`;
-  texto += `*Cliente:* ${pacoteDeDados.clienteNome}\n`;
+    if (pacoteDeDados.tipoEntrega === 'entregar' || pacoteDeDados.tipoEntrega === 'Entrega') {
+      texto += `*Tipo:* Entrega 🛵\n`;
+      if (typeof dadosCliente !== 'undefined' && dadosCliente.endereco) {
+        texto += `*Endereço:* ${dadosCliente.endereco}\n`;
+      }
+    } else {
+      texto += `*Tipo:* Retirada no Local 🏪\n`;
+    }
 
-  if (pacoteDeDados.tipoEntrega === 'entregar') {
-    texto += `*Tipo:* Entrega 🛵\n`;
-    texto += `*Endereço:* ${dadosCliente.endereco}\n`;
-  } else {
-    texto += `*Tipo:* Retirada no Local 🏪\n`;
+    texto += `\n*🛒 Itens do Pedido:*\n`;
+
+    pacoteDeDados.carrinho.forEach(item => {
+      const subtotalItem = Number(item.quantidade) * Number(item.preco);
+      const valorFormatado = subtotalItem.toFixed(2).replace('.', ',');
+      texto += `▪️ ${item.quantidade}x ${item.nome} - R$ ${valorFormatado}\n`;
+    });
+
+    texto += `\n*🍽️ Acompanhamentos e Extras:*\n`;
+    texto += `Farofa: ${pacoteDeDados.farofa}\n`;
+    texto += `Vinagrete: ${pacoteDeDados.vinagrete}\n`;
+
+    if (pacoteDeDados.observacoes && pacoteDeDados.observacoes.trim() !== "") {
+      texto += `*Obs:* ${pacoteDeDados.observacoes}\n`;
+    }
+
+    texto += `\n*📊 Resumo dos Valores:*\n`;
+
+    if (taxaDeEntrega > 0) {
+      const subtotalPuro = Number(pacoteDeDados.total) - Number(taxaDeEntrega);
+      texto += `Subtotal: R$ ${subtotalPuro.toFixed(2).replace('.', ',')}\n`;
+      texto += `Taxa de Entrega: R$ ${Number(taxaDeEntrega).toFixed(2).replace('.', ',')}\n`;
+    }
+
+    const totalFormatado = Number(pacoteDeDados.total).toFixed(2).replace('.', ',');
+    texto += `*💰 TOTAL GERAL: R$ ${totalFormatado}*\n`;
+
+    if (configLoja.pixKey) {
+      texto += `\n*🔑 Chave Pix:* ${configLoja.pixKey}\n`;
+    }
+
+    texto += `\n`;
+
+    const numeroDestino = configLoja.whatsappNumber || "5581920036280";
+    const textoCodificado = encodeURIComponent(texto);
+    const urlZap = `https://wa.me/${numeroDestino}?text=${textoCodificado}`;
+    window.open(urlZap, '_blank');
+
+    alert(`Pedido enviado com sucesso!\nAnote o seu protocolo: ${protocolo}`);
+    window.location.reload();
   }
 
-  texto += `\n*🛒 Itens do Pedido:*\n`;
+  // ==========================================
+  // 4. EFEITOS VISUAIS E UX (CONTADOR DE CARACTERES)
+  // ==========================================
 
-  pacoteDeDados.carrinho.forEach(item => {
-    let subtotalItem = item.quantidade * item.preco;
-    let valorFormatado = subtotalItem.toFixed(2).replace('.', ',');
-    texto += `▪️ ${item.quantidade}x ${item.nome} - R$ ${valorFormatado}\n`;
+  // Usamos o evento 'input' porque ele detecta até se o cliente colar um texto pronto
+  document.getElementById('obs-pedido').addEventListener('input', function () {
+
+    // 1. Conta quantas letras estão na caixa de texto neste exato milissegundo
+    const qtdDigitada = this.value.length;
+
+    // 2. Pega a div do contador
+    const divContador = document.getElementById('contador-obs');
+
+    // 3. Atualiza o texto da tela
+    divContador.innerText = `${qtdDigitada}/90 caracteres`;
+
+    // Bônus de UX: Muda a cor para vermelho se bater no teto!
+    if (qtdDigitada >= 90) {
+      divContador.style.color = 'red';
+      divContador.style.fontWeight = 'bold';
+    } else {
+      divContador.style.color = '#666666'; // Cor cinza normal
+      divContador.style.fontWeight = 'normal';
+    }
   });
 
-  texto += `\n*🍽️ Acompanhamentos e Extras:*\n`;
-  texto += `Farofa: ${pacoteDeDados.farofa}\n`;
-  texto += `Vinagrete: ${pacoteDeDados.vinagrete}\n`;
+  // 1. Declare a variável fora da função para guardar a memória do gráfico
+  let meuGraficoVendas = null;
 
-  if (pacoteDeDados.observacoes && pacoteDeDados.observacoes.trim() !== "") {
-    texto += `*Obs:* ${pacoteDeDados.observacoes}\n`;
-  }
+  function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
+    const ctx = document.getElementById('graficoVendas').getContext('2d');
 
-  texto += `\n*📊 Resumo dos Valores:*\n`;
+    // 2. Apaga o gráfico antigo se ele existir
+    if (meuGraficoVendas !== null) {
+      meuGraficoVendas.destroy();
+    }
 
-  if (taxaDeEntrega > 0) {
-    let subtotalPuro = pacoteDeDados.total - taxaDeEntrega;
-    texto += `Subtotal: R$ ${subtotalPuro.toFixed(2).replace('.', ',')}\n`;
-    texto += `Taxa de Entrega: R$ ${taxaDeEntrega.toFixed(2).replace('.', ',')}\n`;
-  }
-
-  let totalFormatado = pacoteDeDados.total.toFixed(2).replace('.', ',');
-  texto += `*💰 TOTAL GERAL: R$ ${totalFormatado}*\n\n`;
-
-  const textoCodificado = encodeURIComponent(texto);
-  const urlZap = "https://wa.me/5581920036280?text=" + textoCodificado;
-  window.open(urlZap, '_blank');
-
-  alert(`Pedido enviado com sucesso!\nAnote o seu protocolo: ${protocolo}`);
-  window.location.reload();
-}
-
-// ==========================================
-// 4. EFEITOS VISUAIS E UX (CONTADOR DE CARACTERES)
-// ==========================================
-
-// Usamos o evento 'input' porque ele detecta até se o cliente colar um texto pronto
-document.getElementById('obs-pedido').addEventListener('input', function () {
-
-  // 1. Conta quantas letras estão na caixa de texto neste exato milissegundo
-  const qtdDigitada = this.value.length;
-
-  // 2. Pega a div do contador
-  const divContador = document.getElementById('contador-obs');
-
-  // 3. Atualiza o texto da tela
-  divContador.innerText = `${qtdDigitada}/90 caracteres`;
-
-  // Bônus de UX: Muda a cor para vermelho se bater no teto!
-  if (qtdDigitada >= 90) {
-    divContador.style.color = 'red';
-    divContador.style.fontWeight = 'bold';
-  } else {
-    divContador.style.color = '#666666'; // Cor cinza normal
-    divContador.style.fontWeight = 'normal';
-  }
-});
-
-// 1. Declare a variável fora da função para guardar a memória do gráfico
-let meuGraficoVendas = null;
-
-function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
-  const ctx = document.getElementById('graficoVendas').getContext('2d');
-
-  // 2. Apaga o gráfico antigo se ele existir
-  if (meuGraficoVendas !== null) {
-    meuGraficoVendas.destroy();
-  }
-
-  // 3. Atribui a criação do gráfico à variável (HORIZONTAL)
-  meuGraficoVendas = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: nomesProdutos,
-      datasets: [{
-        label: 'Unidades Vendidas',
-        data: quantidadesVendidas,
-        backgroundColor: '#00cc66',
-        borderRadius: 5
-      }]
-    },
-    options: {
-      indexAxis: 'y', // Deita o gráfico
-      responsive: true,
-      plugins: {
-        legend: {
-          labels: { color: 'white' }
-        }
+    // 3. Atribui a criação do gráfico à variável (HORIZONTAL)
+    meuGraficoVendas = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: nomesProdutos,
+        datasets: [{
+          label: 'Unidades Vendidas',
+          data: quantidadesVendidas,
+          backgroundColor: '#00cc66',
+          borderRadius: 5
+        }]
       },
-      scales: {
-        x: {
-          ticks: { color: 'white' },
-          beginAtZero: true
+      options: {
+        indexAxis: 'y', // Deita o gráfico
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: { color: 'white' }
+          }
         },
-        y: {
-          ticks: {
-            color: 'white',
-            autoSkip: false // Mostra os 7 nomes
+        scales: {
+          x: {
+            ticks: { color: 'white' },
+            beginAtZero: true
+          },
+          y: {
+            ticks: {
+              color: 'white',
+              autoSkip: false // Mostra os 7 nomes
+            }
           }
         }
       }
-    }
-  });
-}
-
-
-// Busca os dados reais no backend e desenha o gráfico
-async function carregarGraficoVendas() {
-  try {
-    // AQUI ESTAVA O ERRO: Agora com a URL completa do seu backend!
-    const urlGrafico = `https://skewers-order-backend.vercel.app/api/relatorios/top5/${ID_CLIENTE}`;
-    const resposta = await fetch(urlGrafico);
-    const dados = await resposta.json();
-
-    // Separa os nomes e as quantidades que vieram do banco
-    const nomesProdutos = dados.map(item => item.nome);
-    const quantidadesVendidas = dados.map(item => parseInt(item.total_vendido));
-
-    // Renderiza o gráfico com os dados reais
-    renderizarGrafico(nomesProdutos, quantidadesVendidas);
-
-  } catch (erro) {
-    console.error("Erro ao puxar dados do gráfico:", erro);
+    });
   }
-}
 
-// 1. Função para buscar e exibir o faturamento diário
-async function carregarVendasDiarias() {
-  try {
-    // CORREÇÃO: Trocado de 'usuario_id_da_loja' para 'ID_CLIENTE'
-    const resposta = await fetch(`https://skewers-order-backend.vercel.app/api/relatorios/vendas-diarias/${ID_CLIENTE}`);
-    if (!resposta.ok) throw new Error('Erro ao buscar faturamento');
 
-    const dados = await resposta.json();
-    const lista = document.getElementById('listaVendasDiarias');
-    lista.innerHTML = '';
+  // Busca os dados reais no backend e desenha o gráfico
+  async function carregarGraficoVendas() {
+    try {
+      // AQUI ESTAVA O ERRO: Agora com a URL completa do seu backend!
+      const urlGrafico = `https://skewers-order-backend.vercel.app/api/relatorios/top5/${ID_CLIENTE}`;
+      const resposta = await fetch(urlGrafico);
+      const dados = await resposta.json();
 
-    if (dados.length === 0) {
-      lista.innerHTML = '<li>Nenhuma venda registrada ainda.</li>';
+      // Separa os nomes e as quantidades que vieram do banco
+      const nomesProdutos = dados.map(item => item.nome);
+      const quantidadesVendidas = dados.map(item => parseInt(item.total_vendido));
+
+      // Renderiza o gráfico com os dados reais
+      renderizarGrafico(nomesProdutos, quantidadesVendidas);
+
+    } catch (erro) {
+      console.error("Erro ao puxar dados do gráfico:", erro);
+    }
+  }
+
+  // 1. Função para buscar e exibir o faturamento diário
+  async function carregarVendasDiarias() {
+    try {
+      // CORREÇÃO: Trocado de 'usuario_id_da_loja' para 'ID_CLIENTE'
+      const resposta = await fetch(`https://skewers-order-backend.vercel.app/api/relatorios/vendas-diarias/${ID_CLIENTE}`);
+      if (!resposta.ok) throw new Error('Erro ao buscar faturamento');
+
+      const dados = await resposta.json();
+      const lista = document.getElementById('listaVendasDiarias');
+      lista.innerHTML = '';
+
+      if (dados.length === 0) {
+        lista.innerHTML = '<li>Nenhuma venda registrada ainda.</li>';
+        return;
+      }
+
+      dados.forEach(dia => {
+        // Converte a data para o padrão do Brasil
+        const dataFormatada = new Date(dia.data_venda).toLocaleDateString('pt-BR');
+        // Converte o número para formato de dinheiro (R$)
+        const valorFormatado = Number(dia.total_arrecadado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        const item = document.createElement('li');
+        item.style.marginBottom = '10px';
+        item.innerHTML = `<strong>${dataFormatada}</strong>: <span style="color: #00cc66;">${valorFormatado}</span>`;
+        lista.appendChild(item);
+      });
+    } catch (erro) {
+      console.error("Erro:", erro);
+    }
+  }
+
+  // 2. Função acionada pelo botão vermelho (com dupla trava)
+  async function zerarVendas() {
+    const textoDigitado = prompt('Digite ZERAR para apagar o histórico de vendas:');
+    if (textoDigitado !== 'ZERAR') {
+      alert('Ação cancelada.');
       return;
     }
 
-    dados.forEach(dia => {
-      // Converte a data para o padrão do Brasil
-      const dataFormatada = new Date(dia.data_venda).toLocaleDateString('pt-BR');
-      // Converte o número para formato de dinheiro (R$)
-      const valorFormatado = Number(dia.total_arrecadado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    try {
+      const base = 'https://skewers-order-backend.vercel.app';
+      const url = `${base}/api/relatorios/zerar/${ID_CLIENTE}`;
 
-      const item = document.createElement('li');
-      item.style.marginBottom = '10px';
-      item.innerHTML = `<strong>${dataFormatada}</strong>: <span style="color: #00cc66;">${valorFormatado}</span>`;
-      lista.appendChild(item);
-    });
-  } catch (erro) {
-    console.error("Erro:", erro);
-  }
-}
+      const resposta = await fetch(url, {
+        method: 'DELETE'
+      });
 
-// 2. Função acionada pelo botão vermelho (com dupla trava)
-async function zerarVendas() {
-  const textoDigitado = prompt('Digite ZERAR para apagar o histórico de vendas:');
-  if (textoDigitado !== 'ZERAR') {
-    alert('Ação cancelada.');
-    return;
-  }
+      if (!resposta.ok) {
+        throw new Error(`Servidor respondeu com HTTP ${resposta.status}`);
+      }
 
-  try {
-    const base = 'https://skewers-order-backend.vercel.app';
-    const url = `${base}/api/relatorios/zerar/${ID_CLIENTE}`;
+      await resposta.json().catch(() => ({}));
 
-    const resposta = await fetch(url, {
-      method: 'DELETE'
-    });
+      alert('Histórico zerado com sucesso!');
 
-    if (!resposta.ok) {
-      throw new Error(`Servidor respondeu com HTTP ${resposta.status}`);
+      if (typeof carregarGrafico === 'function') {
+        await carregarGrafico();
+      }
+      if (typeof carregarVendas === 'function') {
+        await carregarVendas();
+      }
+      if (typeof buscarVendas === 'function') {
+        await buscarVendas();
+      }
+    } catch (erro) {
+      console.error('Erro detalhado ao zerar vendas:', erro);
+      alert(`Falha ao concluir a limpeza: ${erro.message}`);
     }
-
-    await resposta.json().catch(() => ({}));
-
-    alert('Histórico zerado com sucesso!');
-
-    if (typeof carregarGrafico === 'function') {
-      await carregarGrafico();
-    }
-    if (typeof carregarVendas === 'function') {
-      await carregarVendas();
-    }
-    if (typeof buscarVendas === 'function') {
-      await buscarVendas();
-    }
-  } catch (erro) {
-    console.error('Erro detalhado ao zerar vendas:', erro);
-    alert(`Falha ao concluir a limpeza: ${erro.message}`);
-  }
-}
-
-function alternarPainel() {
-  const painel = document.getElementById('painel-operacional');
-  const botao = document.getElementById('btn-gestor');
-  const estaOculto = painel.style.display === 'none';
-
-  if (estaOculto) {
-    painel.style.display = 'block';
-    botao.innerText = '🔼 Ocultar Resumo Operacional';
-
-    // Dia operacional (vira às 03:00 da manhã)
-    const tresHoras = 3 * 60 * 60 * 1000;
-    const hojeOp = new Date(Date.now() - tresHoras)
-      .toLocaleDateString('en-CA');
-
-    const inputIni = document.getElementById('filtro-inicio');
-    const inputFim = document.getElementById('filtro-fim');
-
-    if (!inputIni.value) inputIni.value = hojeOp;
-    if (!inputFim.value) inputFim.value = hojeOp;
-
-    buscarVendasPorData();
-    verificarEstoqueCritico(listaGlobalProdutos);
-    painel.scrollIntoView({ behavior: 'smooth' });
-  } else {
-    painel.style.display = 'none';
-    botao.innerText = '📊 Ver Resumo Operacional e Vendas';
-  }
-}
-
-let textoFechamentoZap = '';
-
-async function buscarVendasPorData() {
-  const inicio = document.getElementById('filtro-inicio').value;
-  const fim = document.getElementById('filtro-fim').value;
-  const lista = document.getElementById('listaVendasDiarias');
-  const listaDet = document.getElementById('listaPedidosDetalhados');
-  const btnRes = document.getElementById('btn-zap-resumo');
-  const btnComp = document.getElementById('btn-zap-completo');
-
-  if (!inicio || !fim) return;
-
-  if (inicio > fim) {
-    lista.innerHTML = '<li>Data inicial maior que a final.</li>';
-    if (listaDet) listaDet.innerHTML = '';
-    if (btnRes) btnRes.style.display = 'none';
-    if (btnComp) btnComp.style.display = 'none';
-    textoZapResumo = '';
-    textoZapCompleto = '';
-    return;
   }
 
-  lista.innerHTML = '<li>Carregando...</li>';
-  if (btnRes) btnRes.style.display = 'none';
-  if (btnComp) btnComp.style.display = 'none';
-  buscarPedidosDetalhados(inicio, fim);
+  function alternarPainel() {
+    const painel = document.getElementById('painel-operacional');
+    const botao = document.getElementById('btn-gestor');
+    const estaOculto = painel.style.display === 'none';
 
-  try {
-    const base = 'https://skewers-order-backend.vercel.app';
-    const rota = `/api/relatorios/periodo/${ID_CLIENTE}`;
-    const url = `${base}${rota}?inicio=${inicio}&fim=${fim}`;
+    if (estaOculto) {
+      painel.style.display = 'block';
+      botao.innerText = '🔼 Ocultar Resumo Operacional';
 
-    const resp = await fetch(url);
-    const dados = await resp.json();
+      // Dia operacional (vira às 03:00 da manhã)
+      const tresHoras = 3 * 60 * 60 * 1000;
+      const hojeOp = new Date(Date.now() - tresHoras)
+        .toLocaleDateString('en-CA');
 
-    if (!Array.isArray(dados) || dados.length === 0) {
-      lista.innerHTML = '<li>Nenhuma venda neste período.</li>';
+      const inputIni = document.getElementById('filtro-inicio');
+      const inputFim = document.getElementById('filtro-fim');
+
+      if (!inputIni.value) inputIni.value = hojeOp;
+      if (!inputFim.value) inputFim.value = hojeOp;
+
+      buscarVendasPorData();
+      verificarEstoqueCritico(listaGlobalProdutos);
+      painel.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      painel.style.display = 'none';
+      botao.innerText = '📊 Ver Resumo Operacional e Vendas';
+    }
+  }
+
+  let textoFechamentoZap = '';
+
+  async function buscarVendasPorData() {
+    const inicio = document.getElementById('filtro-inicio').value;
+    const fim = document.getElementById('filtro-fim').value;
+    const lista = document.getElementById('listaVendasDiarias');
+    const listaDet = document.getElementById('listaPedidosDetalhados');
+    const btnRes = document.getElementById('btn-zap-resumo');
+    const btnComp = document.getElementById('btn-zap-completo');
+
+    if (!inicio || !fim) return;
+
+    if (inicio > fim) {
+      lista.innerHTML = '<li>Data inicial maior que a final.</li>';
+      if (listaDet) listaDet.innerHTML = '';
+      if (btnRes) btnRes.style.display = 'none';
+      if (btnComp) btnComp.style.display = 'none';
       textoZapResumo = '';
       textoZapCompleto = '';
       return;
     }
 
-    let totalGeral = 0;
-    let totalPedidos = 0;
-    let html = '';
-    let linhasZap = '';
+    lista.innerHTML = '<li>Carregando...</li>';
+    if (btnRes) btnRes.style.display = 'none';
+    if (btnComp) btnComp.style.display = 'none';
+    buscarPedidosDetalhados(inicio, fim);
 
-    dados.forEach((linha) => {
-      const valor = Number(linha.faturamento) || 0;
-      const qtd = Number(linha.total_pedidos) || 0;
-      totalGeral += valor;
-      totalPedidos += qtd;
+    try {
+      const base = 'https://skewers-order-backend.vercel.app';
+      const rota = `/api/relatorios/periodo/${ID_CLIENTE}`;
+      const url = `${base}${rota}?inicio=${inicio}&fim=${fim}`;
 
-      html += `
+      const resp = await fetch(url);
+      const dados = await resp.json();
+
+      if (!Array.isArray(dados) || dados.length === 0) {
+        lista.innerHTML = '<li>Nenhuma venda neste período.</li>';
+        textoZapResumo = '';
+        textoZapCompleto = '';
+        return;
+      }
+
+      let totalGeral = 0;
+      let totalPedidos = 0;
+      let html = '';
+      let linhasZap = '';
+
+      dados.forEach((linha) => {
+        const valor = Number(linha.faturamento) || 0;
+        const qtd = Number(linha.total_pedidos) || 0;
+        totalGeral += valor;
+        totalPedidos += qtd;
+
+        html += `
         <li>
           ${linha.tipo_entrega}: ${qtd} ped.
           — R$ ${valor.toFixed(2)}
         </li>
       `;
-      linhasZap += `• ${linha.tipo_entrega}: `;
-      linhasZap += `${qtd} ped. (R$ ${valor.toFixed(2)})\n`;
-    });
+        linhasZap += `• ${linha.tipo_entrega}: `;
+        linhasZap += `${qtd} ped. (R$ ${valor.toFixed(2)})\n`;
+      });
 
-    const ticket = totalPedidos > 0
-      ? totalGeral / totalPedidos
-      : 0;
+      const ticket = totalPedidos > 0
+        ? totalGeral / totalPedidos
+        : 0;
 
-    html += `
+      html += `
       <li style="margin-top: 12px; color: #38bdf8;">
         <strong>Total: R$ ${totalGeral.toFixed(2)}</strong>
         (${totalPedidos} pedidos)
@@ -1055,131 +1066,131 @@ async function buscarVendasPorData() {
       </li>
     `;
 
-    lista.innerHTML = html;
+      lista.innerHTML = html;
 
-    const iniBR = inicio.split('-').reverse().join('/');
-    const fimBR = fim.split('-').reverse().join('/');
-    const titulo = inicio === fim
-      ? `FECHAMENTO (${iniBR})`
-      : `FECHAMENTO (${iniBR} a ${fimBR})`;
+      const iniBR = inicio.split('-').reverse().join('/');
+      const fimBR = fim.split('-').reverse().join('/');
+      const titulo = inicio === fim
+        ? `FECHAMENTO (${iniBR})`
+        : `FECHAMENTO (${iniBR} a ${fimBR})`;
 
-    textoZapResumo =
-      `📊 *${titulo} — RESUMO*\n\n` +
-      `${linhasZap}\n` +
-      `📦 *Pedidos:* ${totalPedidos}\n` +
-      `🎯 *Ticket Médio:* R$ ${ticket.toFixed(2)}\n` +
-      `💰 *TOTAL:* R$ ${totalGeral.toFixed(2)}`;
+      textoZapResumo =
+        `📊 *${titulo} — RESUMO*\n\n` +
+        `${linhasZap}\n` +
+        `📦 *Pedidos:* ${totalPedidos}\n` +
+        `🎯 *Ticket Médio:* R$ ${ticket.toFixed(2)}\n` +
+        `💰 *TOTAL:* R$ ${totalGeral.toFixed(2)}`;
 
-    if (btnRes) btnRes.style.display = 'inline-block';
-    if (btnComp) btnComp.style.display = 'inline-block';
-  } catch (erro) {
-    console.error('Erro ao buscar período:', erro);
-    lista.innerHTML = '<li>Erro ao carregar dados.</li>';
-  }
-}
-
-function enviarFechamentoZap(tipo = 'resumo') {
-  const texto = tipo === 'completo'
-    ? textoZapCompleto
-    : textoZapResumo;
-
-  if (!texto) {
-    alert('Relatório ainda não carregou.');
-    return;
-  }
-
-  const msg = encodeURIComponent(texto);
-  window.open(`https://wa.me/?text=${msg}`, '_blank');
-}
-
-function verificarEstoqueCritico(listaProdutos) {
-  const caixa = document.getElementById('alerta-estoque');
-  const ul = document.getElementById('lista-estoque-critico');
-  if (!caixa || !ul || !Array.isArray(listaProdutos)) return;
-
-  // Filtra produtos com estoque <= 5
-  const criticos = listaProdutos
-    .filter((p) => {
-      const qtd = Number(p.estoque ?? p.quantidade ?? 99);
-      return qtd <= 5;
-    })
-    .sort((a, b) => {
-      const qa = Number(a.estoque ?? a.quantidade ?? 0);
-      const qb = Number(b.estoque ?? b.quantidade ?? 0);
-      return qa - qb;
-    });
-
-  if (criticos.length === 0) {
-    caixa.style.display = 'none';
-    return;
-  }
-
-  let html = '';
-  criticos.forEach((p) => {
-    const qtd = Number(p.estoque ?? p.quantidade ?? 0);
-    const nome = p.nome || p.titulo || 'Produto';
-
-    if (qtd <= 0) {
-      html += `
-        <li style="margin-bottom: 6px; color: #ff4444;">
-          🔴 <strong>${nome}</strong> — ESGOTADO (0)
-        </li>`;
-    } else {
-      html += `
-        <li style="margin-bottom: 6px; color: #fbbf24;">
-          🟡 <strong>${nome}</strong> — restam ${qtd} un.
-        </li>`;
+      if (btnRes) btnRes.style.display = 'inline-block';
+      if (btnComp) btnComp.style.display = 'inline-block';
+    } catch (erro) {
+      console.error('Erro ao buscar período:', erro);
+      lista.innerHTML = '<li>Erro ao carregar dados.</li>';
     }
-  });
+  }
 
-  ul.innerHTML = html;
-  caixa.style.display = 'block';
-}
+  function enviarFechamentoZap(tipo = 'resumo') {
+    const texto = tipo === 'completo'
+      ? textoZapCompleto
+      : textoZapResumo;
 
-async function buscarPedidosDetalhados(inicio, fim) {
-  const ul = document.getElementById('listaPedidosDetalhados');
-  if (!ul) return;
-
-  ul.innerHTML = '<li>Carregando pedidos...</li>';
-
-  try {
-    const base = 'https://skewers-order-backend.vercel.app';
-    const rota = `/api/relatorios/pedidos/${ID_CLIENTE}`;
-    const url = `${base}${rota}?inicio=${inicio}&fim=${fim}`;
-
-    const resp = await fetch(url);
-    const pedidos = await resp.json();
-
-    if (!Array.isArray(pedidos) || pedidos.length === 0) {
-      ul.innerHTML = '<li>Nenhum pedido detalhado.</li>';
-      textoZapCompleto = '';
+    if (!texto) {
+      alert('Relatório ainda não carregou.');
       return;
     }
 
-    ul.innerHTML = pedidos
-      .map((p) => {
-        const valor = Number(p.total || 0).toFixed(2);
-        const nome = p.cliente_nome || 'Cliente';
-        const tipo = p.tipo_entrega || 'Pedido';
-        const hora = p.hora_local
-          ? new Date(p.hora_local).toLocaleTimeString(
-            'pt-BR',
-            { hour: '2-digit', minute: '2-digit' }
-          )
-          : '--:--';
+    const msg = encodeURIComponent(texto);
+    window.open(`https://wa.me/?text=${msg}`, '_blank');
+  }
 
-        const extras = [];
-        if (p.farofa === 'Sim') extras.push('Farofa');
-        if (p.vinagrete === 'Sim') extras.push('Vinagrete');
-        const txtExtras = extras.length > 0
-          ? ` (${extras.join(' + ')})`
-          : '';
+  function verificarEstoqueCritico(listaProdutos) {
+    const caixa = document.getElementById('alerta-estoque');
+    const ul = document.getElementById('lista-estoque-critico');
+    if (!caixa || !ul || !Array.isArray(listaProdutos)) return;
 
-        const obs = p.observacoes
-          ? `<br><small style="color: #fbbf24;">Obs: ${p.observacoes}</small>`
-          : '';
+    // Filtra produtos com estoque <= 5
+    const criticos = listaProdutos
+      .filter((p) => {
+        const qtd = Number(p.estoque ?? p.quantidade ?? 99);
+        return qtd <= 5;
+      })
+      .sort((a, b) => {
+        const qa = Number(a.estoque ?? a.quantidade ?? 0);
+        const qb = Number(b.estoque ?? b.quantidade ?? 0);
+        return qa - qb;
+      });
 
-        return `
+    if (criticos.length === 0) {
+      caixa.style.display = 'none';
+      return;
+    }
+
+    let html = '';
+    criticos.forEach((p) => {
+      const qtd = Number(p.estoque ?? p.quantidade ?? 0);
+      const nome = p.nome || p.titulo || 'Produto';
+
+      if (qtd <= 0) {
+        html += `
+        <li style="margin-bottom: 6px; color: #ff4444;">
+          🔴 <strong>${nome}</strong> — ESGOTADO (0)
+        </li>`;
+      } else {
+        html += `
+        <li style="margin-bottom: 6px; color: #fbbf24;">
+          🟡 <strong>${nome}</strong> — restam ${qtd} un.
+        </li>`;
+      }
+    });
+
+    ul.innerHTML = html;
+    caixa.style.display = 'block';
+  }
+
+  async function buscarPedidosDetalhados(inicio, fim) {
+    const ul = document.getElementById('listaPedidosDetalhados');
+    if (!ul) return;
+
+    ul.innerHTML = '<li>Carregando pedidos...</li>';
+
+    try {
+      const base = 'https://skewers-order-backend.vercel.app';
+      const rota = `/api/relatorios/pedidos/${ID_CLIENTE}`;
+      const url = `${base}${rota}?inicio=${inicio}&fim=${fim}`;
+
+      const resp = await fetch(url);
+      const pedidos = await resp.json();
+
+      if (!Array.isArray(pedidos) || pedidos.length === 0) {
+        ul.innerHTML = '<li>Nenhum pedido detalhado.</li>';
+        textoZapCompleto = '';
+        return;
+      }
+
+      ul.innerHTML = pedidos
+        .map((p) => {
+          const valor = Number(p.total || 0).toFixed(2);
+          const nome = p.cliente_nome || 'Cliente';
+          const tipo = p.tipo_entrega || 'Pedido';
+          const hora = p.hora_local
+            ? new Date(p.hora_local).toLocaleTimeString(
+              'pt-BR',
+              { hour: '2-digit', minute: '2-digit' }
+            )
+            : '--:--';
+
+          const extras = [];
+          if (p.farofa === 'Sim') extras.push('Farofa');
+          if (p.vinagrete === 'Sim') extras.push('Vinagrete');
+          const txtExtras = extras.length > 0
+            ? ` (${extras.join(' + ')})`
+            : '';
+
+          const obs = p.observacoes
+            ? `<br><small style="color: #fbbf24;">Obs: ${p.observacoes}</small>`
+            : '';
+
+          return `
           <li style="padding: 10px; border-bottom: 1px solid #444;">
             <strong>${hora}</strong> — ${nome}
             <span style="color: #38bdf8;">[${tipo}]</span>
@@ -1193,41 +1204,41 @@ async function buscarPedidosDetalhados(inicio, fim) {
             ${obs}
           </li>
         `;
-      })
-      .join('');
+        })
+        .join('');
 
-    let blocoPedidos = '\n\n🧾 *PEDIDOS DETALHADOS:*\n';
+      let blocoPedidos = '\n\n🧾 *PEDIDOS DETALHADOS:*\n';
 
-    pedidos.forEach((p) => {
-      const valor = Number(p.total || 0).toFixed(2);
-      const nome = p.cliente_nome || 'Cliente';
-      const tipo = p.tipo_entrega || 'Pedido';
-      const hora = p.hora_local
-        ? new Date(p.hora_local).toLocaleTimeString(
-          'pt-BR',
-          { hour: '2-digit', minute: '2-digit' }
-        )
-        : '--:--';
+      pedidos.forEach((p) => {
+        const valor = Number(p.total || 0).toFixed(2);
+        const nome = p.cliente_nome || 'Cliente';
+        const tipo = p.tipo_entrega || 'Pedido';
+        const hora = p.hora_local
+          ? new Date(p.hora_local).toLocaleTimeString(
+            'pt-BR',
+            { hour: '2-digit', minute: '2-digit' }
+          )
+          : '--:--';
 
-      const extras = [];
-      if (p.farofa === 'Sim') extras.push('Farofa');
-      if (p.vinagrete === 'Sim') extras.push('Vinagrete');
-      const extraTxt = extras.length
-        ? ` | ${extras.join(' + ')}`
-        : '';
+        const extras = [];
+        if (p.farofa === 'Sim') extras.push('Farofa');
+        if (p.vinagrete === 'Sim') extras.push('Vinagrete');
+        const extraTxt = extras.length
+          ? ` | ${extras.join(' + ')}`
+          : '';
 
-      const obsTxt = p.observacoes
-        ? `\n   _Obs: ${p.observacoes}_`
-        : '';
+        const obsTxt = p.observacoes
+          ? `\n   _Obs: ${p.observacoes}_`
+          : '';
 
-      blocoPedidos +=
-        `\n• *${hora}* — ${nome} (${tipo})${extraTxt}` +
-        `\n  *Valor:* R$ ${valor}${obsTxt}`;
-    });
+        blocoPedidos +=
+          `\n• *${hora}* — ${nome} (${tipo})${extraTxt}` +
+          `\n  *Valor:* R$ ${valor}${obsTxt}`;
+      });
 
-    textoZapCompleto = `${textoZapResumo}${blocoPedidos}`;
-  } catch (erro) {
-    console.error('Erro ao carregar pedidos:', erro);
-    ul.innerHTML = '<li>Erro ao carregar pedidos.</li>';
+      textoZapCompleto = `${textoZapResumo}${blocoPedidos}`;
+    } catch (erro) {
+      console.error('Erro ao carregar pedidos:', erro);
+      ul.innerHTML = '<li>Erro ao carregar pedidos.</li>';
+    }
   }
-}

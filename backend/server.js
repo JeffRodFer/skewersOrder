@@ -7,6 +7,15 @@ const crypto = require('crypto');
 
 const app = express();
 
+
+// Busca dados de configuração (WhatsApp e Chave Pix) para montar o pedido
+app.get('/api/config-pedido', (req, res) => {
+  return res.json({
+    whatsappNumber: process.env.WHATSAPP_NUMBER || '',
+    pixKey: process.env.PIX_KEY || process.env.CHAVE_PIX || ''
+  });
+});
+
 // ==========================================
 // 1. CONFIGURAÇÕES GERAIS
 // ==========================================
