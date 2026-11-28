@@ -1,107 +1,87 @@
-// === 1. IDENTIDADE DO CLIENTE 2 ===
+// ===================================================
+// 1. CONFIGURAÇÃO GLOBAL E ESTADO DA APLICAÇÃO
+// ===================================================
 const ID_CLIENTE = 2;
+const BACKEND_URL = 'https://skewers-order-backend.vercel.app';
+const CARDAPIO_URL = `${BACKEND_URL}/api/cardapio?usuario=${ID_CLIENTE}`;
+const FALLBACK_WHATSAPP = '5581920036280';
 
+let credenciaisAdmin = { user: '', pass: '' };
+let listaGlobalProdutos = [];
+let comidas = [];
+let bebidas = [];
+let carrinho = {};
+let dadosCliente = {};
+let numeroZap = '';
+let chefeLogado = false;
+let meuGraficoVendas = null;
 let textoZapResumo = '';
 let textoZapCompleto = '';
 
-// ATENÇÃO: Esta linha deve ficar solta no topo do arquivo script.js!
-let credenciaisAdmin = { user: '', pass: '' };
-let listaGlobalProdutos = [];
-
-// === 2. APONTAR PARA O BACKEND CENTRAL ===
-const API_URL = `https://skewers-order-backend.vercel.app/api/cardapio?usuario=${ID_CLIENTE}`;
-const url = `https://skewers-order-backend.vercel.app/api/cardapio?usuario=${ID_CLIENTE}`;
-
-// Relógio Sincronizado (Horário de Brasília)
+// ===================================================
+// 2. RELÓGIO E CARREGAMENTO DO CARDÁPIO
+// ===================================================
 function atualizarRelogio() {
+  const elRelogio = document.getElementById('relogio');
+  if (!elRelogio) return;
+
   const opcoes = {
     timeZone: 'America/Sao_Paulo',
     dateStyle: 'short',
     timeStyle: 'medium'
   };
 
-  const relogio = new Intl.DateTimeFormat('pt-BR', opcoes);
-  const dataFormatada = relogio.format(new Date());
-
-  document.getElementById('relogio').innerText = dataFormatada;
+  elRelogio.innerText = new Intl.DateTimeFormat('pt-BR', opcoes).format(new Date());
 }
+
 setInterval(atualizarRelogio, 1000);
 atualizarRelogio();
 
-// ---------------------------------------------------
-// COMUNICAÇÃO COM O SERVIDOR
-// ---------------------------------------------------
-
-// (As variáveis antigas foram apagadas daqui!)
-
-fetch(url)
-  .then(resposta => resposta.json())
-  .then(dados => {
-    console.log("Meus espetinhos:", dados.produtos);
-    listaGlobalProdutos = dados.produtos;
-  })
-  .catch(erro => console.error("Erro:", erro));
-
-let comidas = [];
-let bebidas = [];
-let carrinho = {};
-let dadosCliente = {};
-
-// CORREÇÃO: A gaveta do WhatsApp foi criada aqui
-let numeroZap = "";
-
 async function carregarCardapio() {
   try {
-    const API_URL = 'https://skewers-order-backend.vercel.app';
-    const resposta = await fetch(url);
-
+    const resposta = await fetch(CARDAPIO_URL);
     if (!resposta.ok) {
-      throw new Error("Erro na API");
+      throw new Error(`HTTP ${resposta.status} ao buscar cardápio`);
     }
 
     const dadosDoServidor = await resposta.json();
-    numeroZap = dadosDoServidor.whatsapp;
+    const produtosBrutos = Array.isArray(dadosDoServidor.produtos)
+      ? dadosDoServidor.produtos
+      : Array.isArray(dadosDoServidor)
+        ? dadosDoServidor
+        : [];
 
-    // 1. Abre a "caixa grande" e prepara os produtos
-    const produtosProntos = dadosDoServidor.produtos.map(item => {
-      return {
-        id: item.id,
-        nome: item.nome,
-        preco: parseFloat(item.preco),
-        disponivel: item.disponivel,
-        categoria: item.categoria
-      };
-    });
+    listaGlobalProdutos = produtosBrutos;
+    console.log('Meus espetinhos:', listaGlobalProdutos);
 
-    // 2. Separa as "Comidas" e "Bebidas"
-    comidas = produtosProntos.filter(item =>
-      item.categoria.toLowerCase() === 'comida'
-    );
+    if (dadosDoServidor.whatsapp) {
+      numeroZap = String(dadosDoServidor.whatsapp);
+      const linkHeader = document.getElementById('link-whatsapp-header');
+      if (linkHeader) {
+        linkHeader.href = `https://wa.me/${numeroZap}`;
+      }
+    }
 
-    bebidas = produtosProntos.filter(item =>
-      item.categoria.toLowerCase() === 'bebida'
-    );
+    const produtosProntos = produtosBrutos.map((item) => ({
+      id: item.id,
+      nome: item.nome,
+      preco: parseFloat(item.preco) || 0,
+      disponivel: Boolean(item.disponivel),
+      categoria: String(item.categoria || '').toLowerCase()
+    }));
 
-    // 3. Coloca os itens na "vitrine" da página
+    comidas = produtosProntos.filter((item) => item.categoria === 'comida');
+    bebidas = produtosProntos.filter((item) => item.categoria === 'bebida');
+
     renderizarLista(comidas, 'lista-carnes', 'item-carne');
     renderizarLista(bebidas, 'lista-bebidas', 'item-bebida');
-
   } catch (erro) {
-    console.error("Erro ao buscar cardápio:", erro);
+    console.error('Erro ao buscar cardápio:', erro);
   }
 }
 
-
-// ---------------------------------------------------
-// FUNÇÕES DE INTERFACE VISUAL E CARRINHO
-// ---------------------------------------------------
-
-// Renderizar Produtos na Tela
 function renderizarLista(itens, idContainer, classeCor) {
   const container = document.getElementById(idContainer);
-
-  // Dica de Especialista (Nível Médio): Essa trava de segurança evita que 
-  // o seu site quebre caso alguém apague a div do HTML sem querer.
   if (!container) {
     console.error(`Erro: Não encontrei a div id="${idContainer}" no HTML.`);
     return;
@@ -109,574 +89,230 @@ function renderizarLista(itens, idContainer, classeCor) {
 
   container.innerHTML = '';
 
-  itens.forEach(item => {
-    // Se o item foi desativado no painel gerencial, ele é pulado e não aparece
+  itens.forEach((item) => {
     if (!item.disponivel) return;
 
-    // Inicia a quantidade desse item no carrinho como Zero
     carrinho[item.id] = 0;
+    const precoFormatado = item.preco.toFixed(2).replace('.', ',');
 
     const div = document.createElement('div');
-    div.className = `item-lista ${classeCor}`; // Adicionei 'item-lista' para manter o CSS que fizemos
-
-    // ... aqui você continua com o restante do seu código (os botões de + e -)
-
-    let precoFormatado = item.preco.toFixed(2).replace('.', ',');
-
+    div.className = `item-lista ${classeCor}`;
     div.innerHTML = `
-            <div>
-                <strong>${item.nome}</strong><br>
-                <small>R$ ${precoFormatado}</small>
-            </div>
-            <div class="controles">
-                <button class="btn-qtd" 
-                        onclick="alterarQtd('${item.id}', -1)">-</button>
-                <span id="qtd-${item.id}">0</span>
-                <button class="btn-qtd" 
-                        onclick="alterarQtd('${item.id}', 1)">+</button>
-            </div>
-        `;
+      <div>
+        <strong>${item.nome}</strong><br>
+        <small>R$ ${precoFormatado}</small>
+      </div>
+      <div class="controles">
+        <button type="button" class="btn-qtd" onclick="alterarQtd('${item.id}', -1)">-</button>
+        <span id="qtd-${item.id}">0</span>
+        <button type="button" class="btn-qtd" onclick="alterarQtd('${item.id}', 1)">+</button>
+      </div>
+    `;
+
     container.appendChild(div);
   });
 }
 
-// Inicializa o processo buscando os dados ao abrir a página
 carregarCardapio();
 
 // ===================================================
-// FUNÇÕES DE INTERAÇÃO E MODAIS
+// 3. INTERAÇÃO DO CLIENTE, CARRINHO E RESUMO
 // ===================================================
-
 function alterarQtd(id, valor) {
-  if (carrinho[id] + valor >= 0) {
-    carrinho[id] += valor;
-    document.getElementById(`qtd-${id}`).innerText = carrinho[id];
+  const atual = Number(carrinho[id]) || 0;
+  const proximo = atual + valor;
+  if (proximo >= 0) {
+    carrinho[id] = proximo;
+    const span = document.getElementById(`qtd-${id}`);
+    if (span) span.innerText = proximo;
   }
 }
 
 function abrirModalCadastro() {
-  document.getElementById('modalCadastro').style.display = 'block';
+  const modal = document.getElementById('modalCadastro');
+  if (modal) modal.style.display = 'block';
 }
 
 function fecharModal(id) {
-  document.getElementById(id).style.display = 'none';
+  const modal = document.getElementById(id);
+  if (modal) modal.style.display = 'none';
+}
+
+function fecharModalCadastro() {
+  fecharModal('modalCadastro');
 }
 
 function abrirModalAdmin() {
-  document.getElementById('modalAdmin').style.display = 'block';
+  const modal = document.getElementById('modalAdmin');
+  if (modal) modal.style.display = 'block';
 }
 
 function verificarEntrega() {
-  const tipo = document.getElementById('cli-tipo').value;
+  const tipo = document.getElementById('cli-tipo')?.value;
   const divEnd = document.getElementById('div-endereco');
-  divEnd.style.display = (tipo === 'entregar') ? 'block' : 'none';
+  const campoEnd = document.getElementById('cli-endereco');
+  if (!divEnd) return;
+
+  if (tipo === 'entregar') {
+    divEnd.style.display = 'block';
+  } else {
+    divEnd.style.display = 'none';
+    if (campoEnd) campoEnd.value = '';
+  }
 }
 
 function salvarCadastro() {
-  dadosCliente = {
-    nome: document.getElementById('cli-nome').value,
-    telefone: document.getElementById('cli-telefone').value,
-    tipo: document.getElementById('cli-tipo').value, // 'retirar' ou 'entregar'
-    endereco: document.getElementById('cli-endereco').value
-  };
+  const nome = document.getElementById('cli-nome')?.value.trim() || '';
+  const telefone = document.getElementById('cli-telefone')?.value.trim() || '';
+  const tipo = document.getElementById('cli-tipo')?.value || 'retirar';
+  const endereco = document.getElementById('cli-endereco')?.value.trim() || '';
 
-  // 1. Trava de segurança: Nome
-  if (!dadosCliente.nome) {
-    return alert("Por favor, preencha o seu nome!");
+  if (!nome) {
+    alert('Por favor, preencha o seu nome!');
+    return;
   }
 
-  // 2. Trava de segurança: Endereço obrigatório SE for entrega
-  if (dadosCliente.tipo === 'entregar' && !dadosCliente.endereco) {
-    return alert("Para entrega, precisamos que preencha o endereço completo!");
+  if (tipo === 'entregar' && !endereco) {
+    alert('Para entrega, precisamos que preencha o endereço completo!');
+    return;
   }
 
-  // 3. Tudo certo! Fecha a tela e libera o cardápio
-  fecharModal('modalCadastro'); // Ou a função que você usa para fechar
-  alert("Cadastro salvo! Escolha os seus espetinhos.");
-}
-
-// NOVA FUNÇÃO DO BOTÃO VOLTAR (Colocada logo abaixo)
-function fecharModalCadastro() {
-  const janelaCadastro = document.getElementById('modalCadastro');
-
-  if (janelaCadastro) {
-    janelaCadastro.style.display = 'none';
-  }
+  dadosCliente = { nome, telefone, tipo, endereco };
+  fecharModal('modalCadastro');
+  alert('Cadastro salvo! Escolha os seus espetinhos.');
 }
 
 function abrirResumo() {
   if (!dadosCliente.nome) {
-    alert("Clique em INICIAR PEDIDO primeiro para se identificar.");
-    return abrirModalCadastro();
+    alert('Clique em INICIAR PEDIDO primeiro para se identificar.');
+    abrirModalCadastro();
+    return;
   }
 
-  let tipoTxt = dadosCliente.tipo === 'entregar'
+  const ehEntrega = dadosCliente.tipo === 'entregar' || dadosCliente.tipo === 'entrega';
+  const tipoTxt = ehEntrega
     ? `Entrega (${dadosCliente.endereco})`
-    : 'Retirada no local';
+    : 'Retirada no local (Taxa isenta)';
 
   let html = `<strong>Cliente:</strong> ${dadosCliente.nome}<br>`;
   html += `<strong>Tipo:</strong> ${tipoTxt}<br><br>`;
-
-  let total = 0;
-  const todosItens = [...comidas, ...bebidas];
-
-  // Variável para verificar se escolheu algo
-  let temItem = false;
-
   html += `<strong>Itens Escolhidos:</strong><br>`;
 
-  todosItens.forEach(item => {
-    let qtd = carrinho[item.id];
+  let subtotal = 0;
+  let temItem = false;
+  const todosItens = [...comidas, ...bebidas];
+
+  todosItens.forEach((item) => {
+    const qtd = Number(carrinho[item.id]) || 0;
     if (qtd > 0) {
       temItem = true;
-      let subtotal = qtd * item.preco;
-      total += subtotal;
-      let subFormatado = subtotal.toFixed(2).replace('.', ',');
+      const itemSubtotal = qtd * item.preco;
+      subtotal += itemSubtotal;
+      const subFormatado = itemSubtotal.toFixed(2).replace('.', ',');
       html += `${qtd}x ${item.nome} - R$ ${subFormatado}<br>`;
     }
   });
 
-  // Trava: se não escolheu nada, avisa e não abre o resumo
   if (!temItem) {
-    return alert("Por favor, escolha pelo menos um item antes de encerrar o pedido!");
+    alert('Por favor, escolha pelo menos um item antes de encerrar o pedido!');
+    return;
   }
 
-  if (dadosCliente.tipo === 'entregar') {
-    html += `<br><small>* Taxa de entrega a combinar.</small>`;
+  const taxa = ehEntrega ? 5.0 : 0.0;
+  const totalGeral = subtotal + taxa;
+
+  if (ehEntrega) {
+    html += `<br><small>Subtotal: R$ ${subtotal.toFixed(2).replace('.', ',')}</small>`;
+    html += `<br><small>Taxa de entrega: R$ ${taxa.toFixed(2).replace('.', ',')}</small>`;
   }
 
-  document.getElementById('conteudo-resumo').innerHTML = html;
-  let totalFormatado = total.toFixed(2).replace('.', ',');
-  document.getElementById('valor-total').innerText = `Total: R$ ${totalFormatado}`;
+  const elResumo = document.getElementById('conteudo-resumo');
+  const elTotal = document.getElementById('valor-total');
+  const modalResumo = document.getElementById('modalResumo');
 
-  document.getElementById('modalResumo').style.display = 'block';
+  if (elResumo) elResumo.innerHTML = html;
+  if (elTotal) elTotal.innerText = `Total: R$ ${totalGeral.toFixed(2).replace('.', ',')}`;
+  if (modalResumo) modalResumo.style.display = 'block';
 }
 
-function enviarPedidoWhatsApp() {
-  const texto = document.getElementById('conteudo-resumo').innerText;
-  const total = document.getElementById('valor-total').innerText;
-
-  const querFarofa = document.querySelector('input[name="farofa"]:checked').value;
-  const querVinagrete = document.querySelector('input[name="vinagrete"]:checked').value;
-  const obs = document.getElementById('obs-pedido').value;
-
-  let extras = `\n*Acompanhamentos:*\n`;
-  extras += `- Farofa: ${querFarofa}\n`;
-  extras += `- Vinagrete: ${querVinagrete}\n`;
-
-  if (obs.trim() !== "") {
-    extras += `\n*Observações:*\n${obs}\n`;
-  }
-
-  let msg = `*Novo Pedido - Espetinho do Chefe*\n\n`;
-  msg += `${texto}\n`;
-  msg += `${extras}\n`;
-  msg += `*${total}*`;
-
-  // CORREÇÃO: Usa o número de WhatsApp que veio do seu servidor (.env)
-  let url = "https://wa.me/5581920036280?text=" + encodeURIComponent(msg);
-  // === NOVO BLOCO: DAR BAIXA AUTOMÁTICA NO ESTOQUE ===
-  const itensComprados = [];
-  const todosItens = [...comidas, ...bebidas];
-
-  todosItens.forEach(item => {
-    let qtd = carrinho[item.id];
-    if (qtd > 0) {
-      itensComprados.push({ id: item.id, quantidade: qtd });
-    }
-  });
-
-  if (itensComprados.length > 0) {
-    fetch('https://skewers-order-backend.vercel.app/api/registrar-venda', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ itensCarrinho: itensComprados })
-    }).catch(erro => console.error("Erro ao abater estoque:", erro));
-  }
-  // === FIM DO NOVO BLOCO ===
-
-  window.open(url, '_blank');
-
-  // CORREÇÃO: Recarrega a página após 2 segundos
-  setTimeout(() => {
-    window.location.reload();
-  }, 2000);
-}
-
-// ==========================================
-// 5. FAXINA DO MODAL DE RESUMO (NOVA FUNÇÃO)
-// ==========================================
 function fecharEResetarResumo() {
-  document.querySelector('input[name="farofa"][value="Sim"]').checked = true;
-  document.querySelector('input[name="vinagrete"][value="Sim"]').checked = true;
-  document.getElementById('obs-pedido').value = '';
-
+  const farofaSim = document.querySelector('input[name="farofa"][value="Sim"]');
+  const vinagreteSim = document.querySelector('input[name="vinagrete"][value="Sim"]');
+  const obsInput = document.getElementById('obs-pedido');
   const divContador = document.getElementById('contador-obs');
-  divContador.innerText = '0/90 caracteres';
-  divContador.style.color = '#666666';
-  divContador.style.fontWeight = 'normal';
+
+  if (farofaSim) farofaSim.checked = true;
+  if (vinagreteSim) vinagreteSim.checked = true;
+  if (obsInput) obsInput.value = '';
+
+  if (divContador) {
+    divContador.innerText = '0/90 caracteres';
+    divContador.style.color = '#666666';
+    divContador.style.fontWeight = 'normal';
+  }
 
   fecharModal('modalResumo');
 }
 
+const campoObs = document.getElementById('obs-pedido');
+if (campoObs) {
+  campoObs.addEventListener('input', function () {
+    const qtdDigitada = this.value.length;
+    const divContador = document.getElementById('contador-obs');
+    if (!divContador) return;
 
+    divContador.innerText = `${qtdDigitada}/90 caracteres`;
+    if (qtdDigitada >= 90) {
+      divContador.style.color = 'red';
+      divContador.style.fontWeight = 'bold';
+    } else {
+      divContador.style.color = '#666666';
+      divContador.style.fontWeight = 'normal';
+    }
+  });
+}
 
 // ===================================================
-// ÁREA DE ADMINISTRAÇÃO E GESTÃO DE ESTOQUE
+// 4. FLUXO UNIFICADO DE PEDIDO + WHATSAPP + PIX
 // ===================================================
-
-// Criamos uma "memória" para o site saber que o chefe entrou
-let chefeLogado = false;
-
-async function loginAdmin(event) {
-  if (event) event.preventDefault();
-
-  const userDigitado = document.getElementById('admin-user').value;
-  const senhaDigitada = document.getElementById('admin-pass').value;
-
-  const dadosDoLogin = {
-    usuario: userDigitado,
-    senha: senhaDigitada
-  };
-
-  console.log("O que estou enviando:", dadosDoLogin);
-
-  try {
-    // Nova URL da Vercel apontando para a verificação de Login
-    const url = 'https://skewers-order-backend.vercel.app/admin/login';
-
-    const resposta = await fetch(url, {
-      method: 'POST',
-      headers: { 'content-Type': 'application/json' },
-      body: JSON.stringify(dadosDoLogin)
-    });
-
-    const resultado = await resposta.json();
-
-    if (resposta.ok) {
-      alert("Acesso Liberado, Chefe!");
-      chefeLogado = true;
-
-      // ==========================================
-      // A MÁGICA ACONTECE AQUI:
-      // Guarda os dados digitados na memória do site
-      credenciaisAdmin.user = userDigitado;
-      credenciaisAdmin.pass = senhaDigitada;
-      // ==========================================
-
-      fecharModal('modalAdmin');
-      abrirPainelAdmin();
-
-    } else {
-      alert("Ops! " + resultado.erro);
-    }
-
-  } catch (erro) {
-    console.error("Erro na comunicação:", erro);
-  }
-}
-
-// ==========================================
-// 1. ABRE O PAINEL E GUARDA NA MEMÓRIA
-// ==========================================
-async function abrirPainelAdmin() {
-  const cabecalho = document.querySelector('header');
-  if (cabecalho) cabecalho.style.display = 'none';
-
-  const principal = document.querySelector('main');
-  if (principal) principal.style.display = 'none';
-
-  const rodape = document.querySelector('footer');
-  if (rodape) rodape.style.display = 'none';
-
-  const painel = document.getElementById('painel-admin');
-  if (painel) {
-    painel.style.display = 'block';
-  } else {
-    console.error("FALTA NO HTML: Não achei a div id='painel-admin'");
-  }
-
-  // Nova URL da Vercel para puxar a lista de produtos no Painel Admin
-  const url = `https://skewers-order-backend.vercel.app/api/cardapio?usuario=${ID_CLIENTE}`;
-  const resposta = await fetch(url);
-  const dados = await resposta.json();
-
-  // A MEMÓRIA: Guarda tudo aqui em vez de desenhar direto
-  listaGlobalProdutos = dados.produtos ? dados.produtos : dados;
-
-  desenharPainel();
-
-  carregarGraficoVendas();
-  carregarVendasDiarias();
-
-  // ==========================================
-  // INICIA O GRÁFICO ASSIM QUE O PAINEL ABRE
-  // ==========================================
-  carregarGraficoVendas();
-}
-
-
-// ==========================================
-// 2. CONSTRÓI A TELA BASEADA NA MEMÓRIA (Com Estoque)
-// ==========================================
-function desenharPainel() {
-  const divLista = document.getElementById('lista-admin');
-  divLista.innerHTML = ''; // Limpa a tela
-
-  // O Botão Mestre que salva o "Carrinho"
-  divLista.innerHTML += `
-    <button onclick="salvarTudoNoBanco()" 
-      style="background-color: #007bff; color: white; padding: 15px; 
-      width: 100%; border: none; border-radius: 5px; cursor: pointer; 
-      font-weight: bold; font-size: 16px; margin-bottom: 20px;">
-      💾 Salvar Todas as Alterações
-    </button>
-  `;
-
-  const comidas = listaGlobalProdutos.filter(item => item.categoria === 'comida');
-  const bebidas = listaGlobalProdutos.filter(item => item.categoria === 'bebida');
-
-  function desenharCaixinha(item) {
-    const corBotao = item.disponivel ? '#ff4d4d' : '#00cc66';
-    const textoBotao = item.disponivel ? 'Desativar' : 'Ativar';
-
-    const div = document.createElement('div');
-    div.className = 'item-lista';
-    div.style = 'display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 10px;';
-
-    div.innerHTML = `
-      <div style="color: white; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <strong>${item.nome}</strong><br>
-          <small>R$ ${parseFloat(item.preco).toFixed(2)} - ${item.categoria}</small>
-        </div>
-        <button onclick="alternarStatusLocal(${item.id})" 
-          style="background-color: ${corBotao}; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">
-          ${textoBotao}
-        </button>
-      </div>
-
-      <div style="display: flex; justify-content: space-between; align-items: center; background-color: #222; padding: 10px; border-radius: 5px;">
-        <div>
-          <label style="color: white; font-size: 14px;">Estoque Atual:</label>
-          <input type="number" id="estoque_${item.id}" value="${item.estoque || 0}" 
-            onchange="atualizarEstoqueLocal(${item.id}, this.value)"
-            style="width: 60px; padding: 5px; margin-left: 5px; border-radius: 3px; border: 1px solid #ccc; text-align: center;">
-        </div>
-        
-        <button onclick="solicitarEstorno(${item.id}, '${item.nome}')" 
-          style="background-color: #ff9800; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px;">
-          ↩️ Estornar
-        </button>
-      </div>
-    `;
-    divLista.appendChild(div);
-  }
-
-  // Desenhando os títulos e as caixas agrupadas
-  divLista.innerHTML += '<h2 style="color: white; margin-top: 15px;">🍖 Carnes</h2>';
-  comidas.forEach(desenharCaixinha);
-
-  divLista.innerHTML += '<h2 style="color: white; margin-top: 30px;">🥤 Bebidas</h2>';
-  bebidas.forEach(desenharCaixinha);
-}
-
-
-// ==========================================
-// 3. MUDA A COR NO CLIQUE (NA MEMÓRIA)
-// ==========================================
-function alternarStatusLocal(idProduto) {
-  const produto = listaGlobalProdutos.find(item => item.id === idProduto);
-  if (produto) {
-    produto.disponivel = !produto.disponivel; // Inverte o valor
-    desenharPainel(); // Redesenha a tela instantaneamente com a nova cor
-  }
-}
-
-// ==========================================
-// 3.5 FUNÇÕES DE ESTOQUE LOCAL
-// ==========================================
-function atualizarEstoqueLocal(idProduto, novoValor) {
-  const produto = listaGlobalProdutos.find(item => item.id === idProduto);
-  if (produto) {
-    produto.estoque = parseInt(novoValor); // Guarda o valor na memória para salvar depois
-  }
-}
-
-async function solicitarEstorno(idProduto, nomeProduto) {
-  const qtdDevolvida = prompt(`Quantos espetinhos de "${nomeProduto}" foram devolvidos pelo motoboy?`);
-
-  if (!qtdDevolvida || isNaN(qtdDevolvida) || Number(qtdDevolvida) <= 0) {
-    return; // Cancela se o gestor não digitar um número válido
-  }
-
-  try {
-    const url = 'https://skewers-order-backend.vercel.app/admin/estornar';
-    const resposta = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        usuario: credenciaisAdmin.user,
-        senha: credenciaisAdmin.pass,
-        itensEstorno: [{ id: idProduto, quantidade: Number(qtdDevolvida) }]
-      })
-    });
-
-    if (resposta.ok) {
-      alert(`${qtdDevolvida} unidade(s) devolvida(s) ao estoque com sucesso!`);
-      // Recarrega o painel para puxar o novo estoque atualizado do banco
-      abrirPainelAdmin();
-    } else {
-      alert("Erro ao processar devolução.");
-    }
-  } catch (erro) {
-    console.error("Erro no estorno:", erro);
-  }
-}
-
-// ==========================================
-// 4. ENVIA O LOTE PARA O BANCO DE DADOS
-// ==========================================
-async function salvarTudoNoBanco() {
-  try {
-    const url = 'https://skewers-order-backend.vercel.app/admin/atualizar-lote';
-
-    const resposta = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        usuario: credenciaisAdmin.user,
-        senha: credenciaisAdmin.pass,
-        produtos: listaGlobalProdutos // <-- Atenção à mudança de nome aqui
-      })
-    });
-
-    if (resposta.ok) {
-      alert("Cardápio e Estoque salvos definitivamente no banco de dados!");
-    } else {
-      const resultado = await resposta.json();
-      alert("Erro ao salvar: " + resultado.erro);
-    }
-  } catch (erro) {
-    console.error("Falha na comunicação:", erro);
-  }
-}
-// ==========================================
-// 5. FECHAR O PAINEL E VOLTAR PARA A LOJA
-// ==========================================
-function fecharPainelAdmin() {
-  // 1. Esconde o painel do gerente
-  const painel = document.getElementById('painel-admin');
-  if (painel) painel.style.display = 'none';
-
-  // 2. Mostra a loja dos clientes novamente
-  const cabecalho = document.querySelector('header');
-  if (cabecalho) cabecalho.style.display = 'block';
-
-  const principal = document.querySelector('main');
-  if (principal) principal.style.display = 'block';
-
-  const rodape = document.querySelector('footer');
-  if (rodape) rodape.style.display = 'block';
-
-  // 3. Limpa a memória por segurança (faz "logout")
-  credenciaisAdmin = { user: '', pass: '' };
-
-  // 4. Recarrega o cardápio da tela inicial para mostrar as alterações
-  if (typeof carregarCardapio === 'function') {
-    carregarCardapio();
-  }
-}
-
-// Função para enviar os dados para a API salvar no banco
-async function salvarPedidoNoBanco(dadosCliente, total, tipoEntrega) {
-
-  // 1. A URL que acabamos de criar no backend
-  const urlAPI = 'https://skewers-order-backend.vercel.app/api/pedidos';
-
-  // 2. O pacote JSON que vamos enviar
-  // Note que usamos o ID_CLIENTE que você já tem no topo do arquivo
-  const pacoteDeDados = {
-    tenantId: ID_CLIENTE,
-    clienteNome: dadosCliente.nome,
-    total: total,
-    tipoEntrega: tipoEntrega
-  };
-
-  try {
-    // 3. O Fetch faz a requisição do tipo POST
-    const resposta = await fetch(urlAPI, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json' // Avisa que é JSON
-      },
-      body: JSON.stringify(pacoteDeDados) // Transforma o objeto em texto
-    });
-
-    // 4. Verificação de segurança
-    if (!resposta.ok) {
-      throw new Error("Erro de comunicação com o servidor.");
-    }
-
-    // 5. Recebemos de volta o pedido que o backend salvou, 
-    // AGORA JÁ COM O UUID GERADO LÁ NO NODE.JS!
-    const pedidoSalvo = await resposta.json();
-
-    console.log("Sucesso! UUID do banco:", pedidoSalvo.id);
-
-    // Retornamos o pedido para usar o UUID no fluxo do WhatsApp
-    return pedidoSalvo;
-
-  } catch (erro) {
-    console.error("Erro ao salvar no banco:", erro);
-    alert("Ops! Houve um problema ao registrar seu pedido.");
-    return null; // Retorna nulo se der errado
-  }
-}
-
-// ==========================================
-// 1. REGRA VISUAL DO ENDEREÇO
-// ==========================================
-function verificarEntrega() {
-  const tipoEscolhido = document.getElementById('cli-tipo').value;
-  const divEndereco = document.getElementById('div-endereco');
-
-  if (tipoEscolhido === 'entregar') {
-    divEndereco.style.display = 'block';
-  } else {
-    divEndereco.style.display = 'none';
-    document.getElementById('cli-endereco').value = '';
-  }
-}
-
-// ==========================================
-// 2. O MOTOR PRINCIPAL (FINALIZAR PEDIDO)
-// ==========================================
 async function finalizarPedido() {
-  const totalItens = Object.values(carrinho || {}).reduce((soma, qtd) => soma + qtd, 0);
+  if (!dadosCliente || !dadosCliente.nome) {
+    alert('Por favor, preencha seus dados em INICIAR PEDIDO antes de enviar.');
+    abrirModalCadastro();
+    return;
+  }
+
+  const totalItens = Object.values(carrinho || {}).reduce(
+    (soma, qtd) => soma + (Number(qtd) || 0),
+    0
+  );
   if (totalItens === 0) {
-    return alert("Seu carrinho está vazio! Escolha alguns espetinhos primeiro.");
+    alert('Seu carrinho está vazio! Escolha alguns espetinhos primeiro.');
+    return;
   }
 
   const btnEnviar = document.querySelector('.btn-whatsapp');
-  const textoOriginal = btnEnviar.innerText;
+  const textoOriginal = btnEnviar ? btnEnviar.innerText : 'Enviar Pedido (WhatsApp)';
 
-  btnEnviar.innerText = "Enviando... Aguarde ⏳";
-  btnEnviar.disabled = true;
-  btnEnviar.style.opacity = "0.6";
+  if (btnEnviar) {
+    btnEnviar.innerText = 'Enviando... Aguarde ⏳';
+    btnEnviar.disabled = true;
+    btnEnviar.style.opacity = '0.6';
+  }
 
-  const farofaEscolhida = document.querySelector('input[name="farofa"]:checked')?.value || "Não";
-  const vinagreteEscolhido = document.querySelector('input[name="vinagrete"]:checked')?.value || "Não";
-  const obsDigitadas = (document.getElementById('obs-pedido')?.value || "").slice(0, 90);
-  const formaPagamentoEscolhida = document.querySelector('input[name="pagamento"]:checked')?.value || "Não informado";
+  const farofaEscolhida = document.querySelector('input[name="farofa"]:checked')?.value || 'Não';
+  const vinagreteEscolhido = document.querySelector('input[name="vinagrete"]:checked')?.value || 'Não';
+  const obsDigitadas = (document.getElementById('obs-pedido')?.value || '').slice(0, 90);
+  const formaPagamentoEscolhida = document.querySelector('input[name="pagamento"]:checked')?.value || 'Pix / Combinar';
 
   const listaParaBackend = [];
+  const catalogoBase = listaGlobalProdutos.length > 0 ? listaGlobalProdutos : [...comidas, ...bebidas];
   let subtotal = 0;
 
   for (const idProduto in carrinho) {
     const qtd = Number(carrinho[idProduto]) || 0;
     if (qtd > 0) {
-      const prod = listaGlobalProdutos.find(p => String(p.id) === String(idProduto));
+      const prod = catalogoBase.find((p) => String(p.id) === String(idProduto));
       if (prod) {
         const precoUnit = parseFloat(prod.preco) || 0;
         subtotal += precoUnit * qtd;
@@ -690,16 +326,18 @@ async function finalizarPedido() {
     }
   }
 
-  const tipoNormalizado = String(dadosCliente.tipo || "").toLowerCase();
-  const ehEntrega = tipoNormalizado === "entregar" || tipoNormalizado === "entrega";
-  const taxaDeEntrega = ehEntrega ? 5.00 : 0.00;
+  const tipoNormalizado = String(dadosCliente.tipo || '').toLowerCase();
+  const ehEntrega = tipoNormalizado === 'entregar' || tipoNormalizado === 'entrega';
+  const taxaDeEntrega = ehEntrega ? 5.0 : 0.0;
   const totalGeral = subtotal + taxaDeEntrega;
 
   const pacoteDeDados = {
     tenantId: ID_CLIENTE,
     clienteNome: dadosCliente.nome,
+    clienteTelefone: dadosCliente.telefone || '',
+    endereco: ehEntrega ? dadosCliente.endereco : '',
     total: totalGeral,
-    tipoEntrega: ehEntrega ? "Entrega" : "Retira",
+    tipoEntrega: ehEntrega ? 'Entrega' : 'Retira',
     formaPagamento: formaPagamentoEscolhida,
     carrinho: listaParaBackend,
     farofa: farofaEscolhida,
@@ -708,539 +346,682 @@ async function finalizarPedido() {
   };
 
   try {
-    const resposta = await fetch('https://skewers-order-backend.vercel.app/api/pedidos', {
+    const resposta = await fetch(`${BACKEND_URL}/api/pedidos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(pacoteDeDados)
     });
 
     if (!resposta.ok) {
-      throw new Error("Falha no servidor ao registrar o pedido.");
+      throw new Error(`Falha no servidor ao registrar o pedido (HTTP ${resposta.status}).`);
     }
 
     const pedidoSalvo = await resposta.json();
-    console.log("Banco de dados OK. UUID gerado:", pedidoSalvo.id);
+    console.log('Pedido salvo no banco. ID/UUID:', pedidoSalvo.id);
 
-    const respConfig = await fetch('https://skewers-order-backend.vercel.app/api/config-pedido');
-    const configLoja = respConfig.ok ? await respConfig.json() : {};
+    let configLoja = {};
+    try {
+      const respConfig = await fetch(`${BACKEND_URL}/api/config-pedido`);
+      if (respConfig.ok) {
+        configLoja = await respConfig.json();
+      }
+    } catch (erroConfig) {
+      console.warn('Não foi possível obter /api/config-pedido, usando fallback:', erroConfig);
+    }
 
     enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega, configLoja);
   } catch (erro) {
-    console.error("Erro no fechamento do pedido:", erro);
-    alert("Ops! Houve uma falha de conexão. Tente novamente.");
+    console.error('Erro no fechamento do pedido:', erro);
+    alert('Ops! Houve uma falha de conexão ao registrar seu pedido. Tente novamente.');
 
-    btnEnviar.innerText = textoOriginal;
-    btnEnviar.disabled = false;
-    btnEnviar.style.opacity = "1";
+    if (btnEnviar) {
+      btnEnviar.innerText = textoOriginal;
+      btnEnviar.disabled = false;
+      btnEnviar.style.opacity = '1';
+    }
+  }
+}
+
+function enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega, configLoja = {}) {
+  const idTexto = pedidoSalvo && pedidoSalvo.id ? String(pedidoSalvo.id) : '';
+  const protocolo = idTexto ? idTexto.substring(0, 6).toUpperCase() : 'NOVO';
+
+  let texto = `*NOVO PEDIDO - #${protocolo}*\n\n`;
+  texto += `*Cliente:* ${pacoteDeDados.clienteNome}\n`;
+
+  if (pacoteDeDados.clienteTelefone) {
+    texto += `*Telefone:* ${pacoteDeDados.clienteTelefone}\n`;
   }
 
-  // ==========================================
-  // 3. A IMPRESSORA DA COZINHA (WHATSAPP)
-  // ==========================================
-  function enviarMensagemWhatsApp(pedidoSalvo, pacoteDeDados, taxaDeEntrega, configLoja = {}) {
-    const idTexto = pedidoSalvo && pedidoSalvo.id ? String(pedidoSalvo.id) : '';
-    const protocolo = idTexto ? idTexto.substring(0, 6).toUpperCase() : 'NOVO';
-
-    let texto = `*NOVO PEDIDO - #${protocolo}*\n\n`;
-    texto += `*Cliente:* ${pacoteDeDados.clienteNome}\n`;
-
-    if (pacoteDeDados.tipoEntrega === 'entregar' || pacoteDeDados.tipoEntrega === 'Entrega') {
-      texto += `*Tipo:* Entrega 🛵\n`;
-      if (typeof dadosCliente !== 'undefined' && dadosCliente.endereco) {
-        texto += `*Endereço:* ${dadosCliente.endereco}\n`;
-      }
-    } else {
-      texto += `*Tipo:* Retirada no Local 🏪\n`;
+  if (pacoteDeDados.tipoEntrega === 'Entrega' || pacoteDeDados.tipoEntrega === 'entregar') {
+    texto += `*Tipo:* Entrega 🛵\n`;
+    if (pacoteDeDados.endereco) {
+      texto += `*Endereço:* ${pacoteDeDados.endereco}\n`;
     }
-
-    texto += `\n*🛒 Itens do Pedido:*\n`;
-
-    pacoteDeDados.carrinho.forEach(item => {
-      const subtotalItem = Number(item.quantidade) * Number(item.preco);
-      const valorFormatado = subtotalItem.toFixed(2).replace('.', ',');
-      texto += `▪️ ${item.quantidade}x ${item.nome} - R$ ${valorFormatado}\n`;
-    });
-
-    texto += `\n*🍽️ Acompanhamentos e Extras:*\n`;
-    texto += `Farofa: ${pacoteDeDados.farofa}\n`;
-    texto += `Vinagrete: ${pacoteDeDados.vinagrete}\n`;
-
-    if (pacoteDeDados.observacoes && pacoteDeDados.observacoes.trim() !== "") {
-      texto += `*Obs:* ${pacoteDeDados.observacoes}\n`;
-    }
-
-    texto += `\n*📊 Resumo dos Valores:*\n`;
-
-    if (taxaDeEntrega > 0) {
-      const subtotalPuro = Number(pacoteDeDados.total) - Number(taxaDeEntrega);
-      texto += `Subtotal: R$ ${subtotalPuro.toFixed(2).replace('.', ',')}\n`;
-      texto += `Taxa de Entrega: R$ ${Number(taxaDeEntrega).toFixed(2).replace('.', ',')}\n`;
-    }
-
-    const totalFormatado = Number(pacoteDeDados.total).toFixed(2).replace('.', ',');
-    texto += `*💰 TOTAL GERAL: R$ ${totalFormatado}*\n`;
-
-    if (configLoja.pixKey) {
-      texto += `\n*🔑 Chave Pix:* ${configLoja.pixKey}\n`;
-    }
-
-    texto += `\n`;
-
-    const numeroDestino = configLoja.whatsappNumber || "5581920036280";
-    const textoCodificado = encodeURIComponent(texto);
-    const urlZap = `https://wa.me/${numeroDestino}?text=${textoCodificado}`;
-    window.open(urlZap, '_blank');
-
-    alert(`Pedido enviado com sucesso!\nAnote o seu protocolo: ${protocolo}`);
-    window.location.reload();
+  } else {
+    texto += `*Tipo:* Retirada no Local 🏪\n`;
   }
 
-  // ==========================================
-  // 4. EFEITOS VISUAIS E UX (CONTADOR DE CARACTERES)
-  // ==========================================
-
-  // Usamos o evento 'input' porque ele detecta até se o cliente colar um texto pronto
-  document.getElementById('obs-pedido').addEventListener('input', function () {
-
-    // 1. Conta quantas letras estão na caixa de texto neste exato milissegundo
-    const qtdDigitada = this.value.length;
-
-    // 2. Pega a div do contador
-    const divContador = document.getElementById('contador-obs');
-
-    // 3. Atualiza o texto da tela
-    divContador.innerText = `${qtdDigitada}/90 caracteres`;
-
-    // Bônus de UX: Muda a cor para vermelho se bater no teto!
-    if (qtdDigitada >= 90) {
-      divContador.style.color = 'red';
-      divContador.style.fontWeight = 'bold';
-    } else {
-      divContador.style.color = '#666666'; // Cor cinza normal
-      divContador.style.fontWeight = 'normal';
-    }
+  texto += `\n*🛒 Itens do Pedido:*\n`;
+  pacoteDeDados.carrinho.forEach((item) => {
+    const subtotalItem = Number(item.quantidade) * Number(item.preco);
+    const valorFormatado = subtotalItem.toFixed(2).replace('.', ',');
+    texto += `▪️ ${item.quantidade}x ${item.nome} - R$ ${valorFormatado}\n`;
   });
 
-  // 1. Declare a variável fora da função para guardar a memória do gráfico
-  let meuGraficoVendas = null;
+  texto += `\n*🍽️ Acompanhamentos e Extras:*\n`;
+  texto += `Farofa: ${pacoteDeDados.farofa}\n`;
+  texto += `Vinagrete: ${pacoteDeDados.vinagrete}\n`;
 
-  function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
-    const ctx = document.getElementById('graficoVendas').getContext('2d');
+  if (pacoteDeDados.observacoes && pacoteDeDados.observacoes.trim() !== '') {
+    texto += `*Obs:* ${pacoteDeDados.observacoes}\n`;
+  }
 
-    // 2. Apaga o gráfico antigo se ele existir
-    if (meuGraficoVendas !== null) {
-      meuGraficoVendas.destroy();
+  texto += `\n*📊 Resumo dos Valores:*\n`;
+  if (taxaDeEntrega > 0) {
+    const subtotalPuro = Number(pacoteDeDados.total) - Number(taxaDeEntrega);
+    texto += `Subtotal: R$ ${subtotalPuro.toFixed(2).replace('.', ',')}\n`;
+    texto += `Taxa de Entrega: R$ ${Number(taxaDeEntrega).toFixed(2).replace('.', ',')}\n`;
+  } else {
+    texto += `Taxa de Entrega: Isenta (Retirada)\n`;
+  }
+
+  const totalFormatado = Number(pacoteDeDados.total).toFixed(2).replace('.', ',');
+  texto += `*💰 TOTAL GERAL: R$ ${totalFormatado}*\n`;
+
+  if (configLoja && configLoja.pixKey) {
+    texto += `\n*🔑 Chave Pix:* ${configLoja.pixKey}\n`;
+  }
+
+  const numeroDestino =
+    (configLoja && configLoja.whatsappNumber) ||
+    numeroZap ||
+    FALLBACK_WHATSAPP;
+
+  const urlZap = `https://wa.me/${numeroDestino}?text=${encodeURIComponent(texto)}`;
+  window.open(urlZap, '_blank', 'noopener,noreferrer');
+
+  alert(`Pedido enviado com sucesso!\nAnote o seu protocolo: ${protocolo}`);
+  setTimeout(() => {
+    window.location.reload();
+  }, 800);
+}
+
+// ===================================================
+// 5. LOGIN ADMIN E GESTÃO DE ESTOQUE
+// ===================================================
+async function loginAdmin(event) {
+  if (event) event.preventDefault();
+
+  const userDigitado = document.getElementById('admin-user')?.value || '';
+  const senhaDigitada = document.getElementById('admin-pass')?.value || '';
+
+  try {
+    const resposta = await fetch(`${BACKEND_URL}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario: userDigitado, senha: senhaDigitada })
+    });
+
+    const resultado = await resposta.json().catch(() => ({}));
+
+    if (resposta.ok) {
+      alert('Acesso Liberado, Chefe!');
+      chefeLogado = true;
+      credenciaisAdmin.user = userDigitado;
+      credenciaisAdmin.pass = senhaDigitada;
+      fecharModal('modalAdmin');
+      await abrirPainelAdmin();
+    } else {
+      alert('Ops! ' + (resultado.erro || 'Credenciais inválidas.'));
     }
+  } catch (erro) {
+    console.error('Erro na comunicação no login:', erro);
+    alert('Erro ao tentar autenticar no servidor.');
+  }
+}
 
-    // 3. Atribui a criação do gráfico à variável (HORIZONTAL)
-    meuGraficoVendas = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: nomesProdutos,
-        datasets: [{
-          label: 'Unidades Vendidas',
-          data: quantidadesVendidas,
-          backgroundColor: '#00cc66',
-          borderRadius: 5
-        }]
+async function abrirPainelAdmin() {
+  const cabecalho = document.querySelector('header');
+  const principal = document.querySelector('main');
+  const rodape = document.querySelector('footer');
+  const painel = document.getElementById('painel-admin');
+
+  if (cabecalho) cabecalho.style.display = 'none';
+  if (principal) principal.style.display = 'none';
+  if (rodape) rodape.style.display = 'none';
+
+  if (painel) {
+    painel.style.display = 'block';
+  } else {
+    console.error("FALTA NO HTML: Não achei a div id='painel-admin'");
+    return;
+  }
+
+  try {
+    const resposta = await fetch(CARDAPIO_URL);
+    const dados = await resposta.json();
+    listaGlobalProdutos = Array.isArray(dados.produtos)
+      ? dados.produtos
+      : Array.isArray(dados)
+        ? dados
+        : [];
+  } catch (erro) {
+    console.error('Erro ao carregar produtos no painel admin:', erro);
+  }
+
+  desenharPainel();
+  await carregarGraficoVendas();
+  await carregarVendasDiarias();
+}
+
+function desenharPainel() {
+  const divLista = document.getElementById('lista-admin');
+  if (!divLista) return;
+
+  divLista.innerHTML = `
+    <button type="button" onclick="salvarTudoNoBanco()"
+      style="background-color: #007bff; color: white; padding: 15px;
+      width: 100%; border: none; border-radius: 5px; cursor: pointer;
+      font-weight: bold; font-size: 16px; margin-bottom: 20px;">
+      💾 Salvar Todas as Alterações
+    </button>
+  `;
+
+  const comidasAdmin = listaGlobalProdutos.filter((item) => String(item.categoria).toLowerCase() === 'comida');
+  const bebidasAdmin = listaGlobalProdutos.filter((item) => String(item.categoria).toLowerCase() === 'bebida');
+
+  function desenharCaixinha(item) {
+    const corBotao = item.disponivel ? '#ff4d4d' : '#00cc66';
+    const textoBotao = item.disponivel ? 'Desativar' : 'Ativar';
+    const nomeEscapado = String(item.nome || '').replace(/'/g, "\\'");
+
+    const div = document.createElement('div');
+    div.className = 'item-lista';
+    div.style.cssText =
+      'display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid #444; padding-bottom: 15px; margin-bottom: 10px;';
+
+    div.innerHTML = `
+      <div style="color: white; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <strong>${item.nome}</strong><br>
+          <small>R$ ${parseFloat(item.preco || 0).toFixed(2)} - ${item.categoria}</small>
+        </div>
+        <button type="button" onclick="alternarStatusLocal(${item.id})"
+          style="background-color: ${corBotao}; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold;">
+          ${textoBotao}
+        </button>
+      </div>
+
+      <div style="display: flex; justify-content: space-between; align-items: center; background-color: #222; padding: 10px; border-radius: 5px;">
+        <div>
+          <label style="color: white; font-size: 14px;">Estoque Atual:</label>
+          <input type="number" id="estoque_${item.id}" value="${item.estoque ?? 0}"
+            onchange="atualizarEstoqueLocal(${item.id}, this.value)"
+            style="width: 60px; padding: 5px; margin-left: 5px; border-radius: 3px; border: 1px solid #ccc; text-align: center;">
+        </div>
+
+        <button type="button" onclick="solicitarEstorno(${item.id}, '${nomeEscapado}')"
+          style="background-color: #ff9800; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 13px;">
+          ↩️ Estornar
+        </button>
+      </div>
+    `;
+
+    divLista.appendChild(div);
+  }
+
+  divLista.innerHTML += '<h2 style="color: white; margin-top: 15px;">🍖 Carnes</h2>';
+  comidasAdmin.forEach(desenharCaixinha);
+
+  divLista.innerHTML += '<h2 style="color: white; margin-top: 30px;">🥤 Bebidas</h2>';
+  bebidasAdmin.forEach(desenharCaixinha);
+}
+
+function alternarStatusLocal(idProduto) {
+  const produto = listaGlobalProdutos.find((item) => item.id === idProduto);
+  if (produto) {
+    produto.disponivel = !produto.disponivel;
+    desenharPainel();
+  }
+}
+
+function atualizarEstoqueLocal(idProduto, novoValor) {
+  const produto = listaGlobalProdutos.find((item) => item.id === idProduto);
+  if (produto) {
+    produto.estoque = parseInt(novoValor, 10) || 0;
+  }
+}
+
+async function solicitarEstorno(idProduto, nomeProduto) {
+  const qtdDevolvida = prompt(
+    `Quantos espetinhos de "${nomeProduto}" foram devolvidos pelo motoboy?`
+  );
+
+  if (!qtdDevolvida || isNaN(qtdDevolvida) || Number(qtdDevolvida) <= 0) {
+    return;
+  }
+
+  try {
+    const resposta = await fetch(`${BACKEND_URL}/admin/estornar`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usuario: credenciaisAdmin.user,
+        senha: credenciaisAdmin.pass,
+        itensEstorno: [{ id: idProduto, quantidade: Number(qtdDevolvida) }]
+      })
+    });
+
+    if (resposta.ok) {
+      alert(`${qtdDevolvida} unidade(s) devolvida(s) ao estoque com sucesso!`);
+      await abrirPainelAdmin();
+    } else {
+      alert('Erro ao processar devolução.');
+    }
+  } catch (erro) {
+    console.error('Erro no estorno:', erro);
+  }
+}
+
+async function salvarTudoNoBanco() {
+  try {
+    const resposta = await fetch(`${BACKEND_URL}/admin/atualizar-lote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        usuario: credenciaisAdmin.user,
+        senha: credenciaisAdmin.pass,
+        produtos: listaGlobalProdutos
+      })
+    });
+
+    if (resposta.ok) {
+      alert('Cardápio e Estoque salvos definitivamente no banco de dados!');
+    } else {
+      const resultado = await resposta.json().catch(() => ({}));
+      alert('Erro ao salvar: ' + (resultado.erro || `HTTP ${resposta.status}`));
+    }
+  } catch (erro) {
+    console.error('Falha na comunicação ao salvar lote:', erro);
+  }
+}
+
+function fecharPainelAdmin() {
+  const painel = document.getElementById('painel-admin');
+  const cabecalho = document.querySelector('header');
+  const principal = document.querySelector('main');
+  const rodape = document.querySelector('footer');
+
+  if (painel) painel.style.display = 'none';
+  if (cabecalho) cabecalho.style.display = 'block';
+  if (principal) principal.style.display = 'block';
+  if (rodape) rodape.style.display = 'block';
+
+  credenciaisAdmin = { user: '', pass: '' };
+  chefeLogado = false;
+
+  if (typeof carregarCardapio === 'function') {
+    carregarCardapio();
+  }
+}
+
+// ===================================================
+// 6. RELATÓRIOS, GRÁFICO E RESUMO OPERACIONAL
+// ===================================================
+function renderizarGrafico(nomesProdutos, quantidadesVendidas) {
+  const canvas = document.getElementById('graficoVendas');
+  if (!canvas || typeof Chart === 'undefined') return;
+
+  const ctx = canvas.getContext('2d');
+  if (meuGraficoVendas !== null) {
+    meuGraficoVendas.destroy();
+  }
+
+  meuGraficoVendas = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: nomesProdutos,
+      datasets: [{
+        label: 'Unidades Vendidas',
+        data: quantidadesVendidas,
+        backgroundColor: '#00cc66',
+        borderRadius: 5
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: 'white' }
+        }
       },
-      options: {
-        indexAxis: 'y', // Deita o gráfico
-        responsive: true,
-        plugins: {
-          legend: {
-            labels: { color: 'white' }
-          }
+      scales: {
+        x: {
+          ticks: { color: 'white' },
+          beginAtZero: true
         },
-        scales: {
-          x: {
-            ticks: { color: 'white' },
-            beginAtZero: true
-          },
-          y: {
-            ticks: {
-              color: 'white',
-              autoSkip: false // Mostra os 7 nomes
-            }
+        y: {
+          ticks: {
+            color: 'white',
+            autoSkip: false
           }
         }
       }
-    });
-  }
-
-
-  // Busca os dados reais no backend e desenha o gráfico
-  async function carregarGraficoVendas() {
-    try {
-      // AQUI ESTAVA O ERRO: Agora com a URL completa do seu backend!
-      const urlGrafico = `https://skewers-order-backend.vercel.app/api/relatorios/top5/${ID_CLIENTE}`;
-      const resposta = await fetch(urlGrafico);
-      const dados = await resposta.json();
-
-      // Separa os nomes e as quantidades que vieram do banco
-      const nomesProdutos = dados.map(item => item.nome);
-      const quantidadesVendidas = dados.map(item => parseInt(item.total_vendido));
-
-      // Renderiza o gráfico com os dados reais
-      renderizarGrafico(nomesProdutos, quantidadesVendidas);
-
-    } catch (erro) {
-      console.error("Erro ao puxar dados do gráfico:", erro);
     }
-  }
+  });
+}
 
-  // 1. Função para buscar e exibir o faturamento diário
-  async function carregarVendasDiarias() {
-    try {
-      // CORREÇÃO: Trocado de 'usuario_id_da_loja' para 'ID_CLIENTE'
-      const resposta = await fetch(`https://skewers-order-backend.vercel.app/api/relatorios/vendas-diarias/${ID_CLIENTE}`);
-      if (!resposta.ok) throw new Error('Erro ao buscar faturamento');
+async function carregarGraficoVendas() {
+  const canvas = document.getElementById('graficoVendas');
+  if (!canvas) return;
 
-      const dados = await resposta.json();
-      const lista = document.getElementById('listaVendasDiarias');
-      lista.innerHTML = '';
-
-      if (dados.length === 0) {
-        lista.innerHTML = '<li>Nenhuma venda registrada ainda.</li>';
-        return;
-      }
-
-      dados.forEach(dia => {
-        // Converte a data para o padrão do Brasil
-        const dataFormatada = new Date(dia.data_venda).toLocaleDateString('pt-BR');
-        // Converte o número para formato de dinheiro (R$)
-        const valorFormatado = Number(dia.total_arrecadado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-        const item = document.createElement('li');
-        item.style.marginBottom = '10px';
-        item.innerHTML = `<strong>${dataFormatada}</strong>: <span style="color: #00cc66;">${valorFormatado}</span>`;
-        lista.appendChild(item);
-      });
-    } catch (erro) {
-      console.error("Erro:", erro);
-    }
-  }
-
-  // 2. Função acionada pelo botão vermelho (com dupla trava)
-  async function zerarVendas() {
-    const textoDigitado = prompt('Digite ZERAR para apagar o histórico de vendas:');
-    if (textoDigitado !== 'ZERAR') {
-      alert('Ação cancelada.');
+  try {
+    const resp = await fetch(`${BACKEND_URL}/api/relatorios/top5/${ID_CLIENTE}`);
+    if (!resp.ok) {
+      renderizarGrafico([], []);
       return;
     }
 
-    try {
-      const base = 'https://skewers-order-backend.vercel.app';
-      const url = `${base}/api/relatorios/zerar/${ID_CLIENTE}`;
+    const dados = await resp.json();
+    const lista = Array.isArray(dados) ? dados : [];
+    const nomesProdutos = lista.map((item) => item.produto_nome || item.nome || 'Item');
+    const quantidadesVendidas = lista.map((item) => Number(item.total_vendido || item.quantidade || 0));
 
-      const resposta = await fetch(url, {
-        method: 'DELETE'
+    renderizarGrafico(nomesProdutos, quantidadesVendidas);
+  } catch (erro) {
+    console.error('Erro ao carregar dados do gráfico:', erro);
+    renderizarGrafico([], []);
+  }
+}
+
+async function carregarVendasDiarias() {
+  const lista = document.getElementById('listaVendasDiarias');
+  if (!lista) return;
+
+  try {
+    const resposta = await fetch(`${BACKEND_URL}/api/relatorios/vendas-diarias/${ID_CLIENTE}`);
+    if (!resposta.ok) throw new Error('Erro ao buscar faturamento');
+
+    const dados = await resposta.json();
+    lista.innerHTML = '';
+
+    if (!Array.isArray(dados) || dados.length === 0) {
+      lista.innerHTML = '<li>Nenhuma venda registrada ainda.</li>';
+      return;
+    }
+
+    dados.forEach((dia) => {
+      const dataFormatada = new Date(dia.data_venda).toLocaleDateString('pt-BR');
+      const valorFormatado = Number(dia.total_arrecadado).toLocaleString('pt-BR', {
+        style: 'currency',
+        currency: 'BRL'
       });
 
-      if (!resposta.ok) {
-        throw new Error(`Servidor respondeu com HTTP ${resposta.status}`);
-      }
+      const item = document.createElement('li');
+      item.style.marginBottom = '10px';
+      item.innerHTML = `<strong>${dataFormatada}</strong>: <span style="color: #00cc66;">${valorFormatado}</span>`;
+      lista.appendChild(item);
+    });
+  } catch (erro) {
+    console.error('Erro ao carregar vendas diárias:', erro);
+  }
+}
 
-      await resposta.json().catch(() => ({}));
-
-      alert('Histórico zerado com sucesso!');
-
-      if (typeof carregarGrafico === 'function') {
-        await carregarGrafico();
-      }
-      if (typeof carregarVendas === 'function') {
-        await carregarVendas();
-      }
-      if (typeof buscarVendas === 'function') {
-        await buscarVendas();
-      }
-    } catch (erro) {
-      console.error('Erro detalhado ao zerar vendas:', erro);
-      alert(`Falha ao concluir a limpeza: ${erro.message}`);
-    }
+async function zerarVendas() {
+  const textoDigitado = prompt('Digite ZERAR para apagar o histórico de vendas:');
+  if (textoDigitado !== 'ZERAR') {
+    alert('Ação cancelada.');
+    return;
   }
 
-  function alternarPainel() {
-    const painel = document.getElementById('painel-operacional');
-    const botao = document.getElementById('btn-gestor');
-    const estaOculto = painel.style.display === 'none';
+  try {
+    const resposta = await fetch(`${BACKEND_URL}/api/relatorios/zerar/${ID_CLIENTE}`, {
+      method: 'DELETE'
+    });
 
-    if (estaOculto) {
-      painel.style.display = 'block';
-      botao.innerText = '🔼 Ocultar Resumo Operacional';
-
-      // Dia operacional (vira às 03:00 da manhã)
-      const tresHoras = 3 * 60 * 60 * 1000;
-      const hojeOp = new Date(Date.now() - tresHoras)
-        .toLocaleDateString('en-CA');
-
-      const inputIni = document.getElementById('filtro-inicio');
-      const inputFim = document.getElementById('filtro-fim');
-
-      if (!inputIni.value) inputIni.value = hojeOp;
-      if (!inputFim.value) inputFim.value = hojeOp;
-
-      buscarVendasPorData();
-      verificarEstoqueCritico(listaGlobalProdutos);
-      painel.scrollIntoView({ behavior: 'smooth' });
-    } else {
-      painel.style.display = 'none';
-      botao.innerText = '📊 Ver Resumo Operacional e Vendas';
+    if (!resposta.ok) {
+      throw new Error(`Servidor respondeu com HTTP ${resposta.status}`);
     }
+
+    await resposta.json().catch(() => ({}));
+    alert('Histórico zerado com sucesso!');
+
+    await carregarGraficoVendas();
+    await carregarVendasDiarias();
+    await buscarVendasPorData();
+  } catch (erro) {
+    console.error('Erro detalhado ao zerar vendas:', erro);
+    alert(`Falha ao concluir a limpeza: ${erro.message}`);
+  }
+}
+
+async function alternarPainel() {
+  const painel = document.getElementById('painel-operacional');
+  const botao = document.getElementById('btn-gestor');
+  if (!painel || !botao) return;
+
+  const estaOculto = painel.style.display === 'none' || painel.style.display === '';
+
+  if (estaOculto) {
+    painel.style.display = 'block';
+    botao.innerText = '🔼 Ocultar Resumo Operacional';
+
+    const tresHoras = 3 * 60 * 60 * 1000;
+    const hojeOp = new Date(Date.now() - tresHoras).toLocaleDateString('en-CA');
+
+    const inputIni = document.getElementById('filtro-inicio');
+    const inputFim = document.getElementById('filtro-fim');
+
+    if (inputIni && !inputIni.value) inputIni.value = hojeOp;
+    if (inputFim && !inputFim.value) inputFim.value = hojeOp;
+
+    await buscarVendasPorData();
+    await carregarGraficoVendas();
+    verificarEstoqueCritico(listaGlobalProdutos);
+    painel.scrollIntoView({ behavior: 'smooth' });
+  } else {
+    painel.style.display = 'none';
+    botao.innerText = '📊 Ver Resumo Operacional e Vendas';
+  }
+}
+
+async function buscarVendasPorData() {
+  const inicio = document.getElementById('filtro-inicio')?.value;
+  const fim = document.getElementById('filtro-fim')?.value;
+  const lista = document.getElementById('listaVendasDiarias');
+  const listaDet = document.getElementById('listaPedidosDetalhados');
+  const btnRes = document.getElementById('btn-zap-resumo');
+  const btnComp = document.getElementById('btn-zap-completo');
+
+  if (!inicio || !fim || !lista) return;
+
+  if (inicio > fim) {
+    lista.innerHTML = '<li>Data inicial maior que a final.</li>';
+    if (listaDet) listaDet.innerHTML = '';
+    if (btnRes) btnRes.style.display = 'none';
+    if (btnComp) btnComp.style.display = 'none';
+    textoZapResumo = '';
+    textoZapCompleto = '';
+    return;
   }
 
-  let textoFechamentoZap = '';
+  lista.innerHTML = '<li>Carregando...</li>';
+  if (btnRes) btnRes.style.display = 'none';
+  if (btnComp) btnComp.style.display = 'none';
 
-  async function buscarVendasPorData() {
-    const inicio = document.getElementById('filtro-inicio').value;
-    const fim = document.getElementById('filtro-fim').value;
-    const lista = document.getElementById('listaVendasDiarias');
-    const listaDet = document.getElementById('listaPedidosDetalhados');
-    const btnRes = document.getElementById('btn-zap-resumo');
-    const btnComp = document.getElementById('btn-zap-completo');
+  await buscarPedidosDetalhados(inicio, fim);
 
-    if (!inicio || !fim) return;
+  try {
+    const urlPer = `${BACKEND_URL}/api/relatorios/periodo/${ID_CLIENTE}?inicio=${inicio}&fim=${fim}`;
+    const resp = await fetch(urlPer);
+    const dados = await resp.json();
 
-    if (inicio > fim) {
-      lista.innerHTML = '<li>Data inicial maior que a final.</li>';
-      if (listaDet) listaDet.innerHTML = '';
-      if (btnRes) btnRes.style.display = 'none';
-      if (btnComp) btnComp.style.display = 'none';
+    if (!Array.isArray(dados) || dados.length === 0) {
+      lista.innerHTML = '<li>Nenhuma venda neste período.</li>';
       textoZapResumo = '';
       textoZapCompleto = '';
       return;
     }
 
-    lista.innerHTML = '<li>Carregando...</li>';
-    if (btnRes) btnRes.style.display = 'none';
-    if (btnComp) btnComp.style.display = 'none';
-    buscarPedidosDetalhados(inicio, fim);
+    let totalGeral = 0;
+    let totalPedidos = 0;
+    let html = '';
+    let linhasZap = '';
 
-    try {
-      const base = 'https://skewers-order-backend.vercel.app';
-      const rota = `/api/relatorios/periodo/${ID_CLIENTE}`;
-      const url = `${base}${rota}?inicio=${inicio}&fim=${fim}`;
+    dados.forEach((linha) => {
+      const valor = Number(linha.faturamento) || 0;
+      const qtd = Number(linha.total_pedidos) || 0;
+      totalGeral += valor;
+      totalPedidos += qtd;
 
-      const resp = await fetch(url);
-      const dados = await resp.json();
+      html += `<li>${linha.tipo_entrega}: ${qtd} ped. — R$ ${valor.toFixed(2)}</li>`;
+      linhasZap += `• ${linha.tipo_entrega}: ${qtd} ped. (R$ ${valor.toFixed(2)})\n`;
+    });
 
-      if (!Array.isArray(dados) || dados.length === 0) {
-        lista.innerHTML = '<li>Nenhuma venda neste período.</li>';
-        textoZapResumo = '';
-        textoZapCompleto = '';
-        return;
-      }
+    const ticket = totalPedidos > 0 ? totalGeral / totalPedidos : 0;
 
-      let totalGeral = 0;
-      let totalPedidos = 0;
-      let html = '';
-      let linhasZap = '';
-
-      dados.forEach((linha) => {
-        const valor = Number(linha.faturamento) || 0;
-        const qtd = Number(linha.total_pedidos) || 0;
-        totalGeral += valor;
-        totalPedidos += qtd;
-
-        html += `
-        <li>
-          ${linha.tipo_entrega}: ${qtd} ped.
-          — R$ ${valor.toFixed(2)}
-        </li>
-      `;
-        linhasZap += `• ${linha.tipo_entrega}: `;
-        linhasZap += `${qtd} ped. (R$ ${valor.toFixed(2)})\n`;
-      });
-
-      const ticket = totalPedidos > 0
-        ? totalGeral / totalPedidos
-        : 0;
-
-      html += `
+    html += `
       <li style="margin-top: 12px; color: #38bdf8;">
-        <strong>Total: R$ ${totalGeral.toFixed(2)}</strong>
-        (${totalPedidos} pedidos)
+        <strong>Total: R$ ${totalGeral.toFixed(2)}</strong> (${totalPedidos} pedidos)
       </li>
       <li style="color: #fbbf24; font-size: 16px;">
         Ticket Médio: R$ ${ticket.toFixed(2)}
       </li>
     `;
 
-      lista.innerHTML = html;
+    lista.innerHTML = html;
 
-      const iniBR = inicio.split('-').reverse().join('/');
-      const fimBR = fim.split('-').reverse().join('/');
-      const titulo = inicio === fim
-        ? `FECHAMENTO (${iniBR})`
-        : `FECHAMENTO (${iniBR} a ${fimBR})`;
+    const iniBR = inicio.split('-').reverse().join('/');
+    const fimBR = fim.split('-').reverse().join('/');
+    const titulo = inicio === fim ? `FECHAMENTO (${iniBR})` : `FECHAMENTO (${iniBR} a ${fimBR})`;
 
-      textoZapResumo =
-        `📊 *${titulo} — RESUMO*\n\n` +
-        `${linhasZap}\n` +
-        `📦 *Pedidos:* ${totalPedidos}\n` +
-        `🎯 *Ticket Médio:* R$ ${ticket.toFixed(2)}\n` +
-        `💰 *TOTAL:* R$ ${totalGeral.toFixed(2)}`;
+    textoZapResumo =
+      `📊 *${titulo} — RESUMO*\n\n` +
+      `${linhasZap}\n` +
+      `📦 *Pedidos:* ${totalPedidos}\n` +
+      `🎯 *Ticket Médio:* R$ ${ticket.toFixed(2)}\n` +
+      `💰 *TOTAL:* R$ ${totalGeral.toFixed(2)}`;
 
-      if (btnRes) btnRes.style.display = 'inline-block';
-      if (btnComp) btnComp.style.display = 'inline-block';
-    } catch (erro) {
-      console.error('Erro ao buscar período:', erro);
-      lista.innerHTML = '<li>Erro ao carregar dados.</li>';
-    }
+    if (btnRes) btnRes.style.display = 'inline-block';
+    if (btnComp) btnComp.style.display = textoZapCompleto ? 'inline-block' : 'none';
+  } catch (erro) {
+    console.error('Erro ao buscar período:', erro);
+    lista.innerHTML = '<li>Erro ao carregar dados.</li>';
   }
+}
 
-  function enviarFechamentoZap(tipo = 'resumo') {
-    const texto = tipo === 'completo'
-      ? textoZapCompleto
-      : textoZapResumo;
+async function buscarPedidosDetalhados(inicio, fim) {
+  const ul = document.getElementById('listaPedidosDetalhados');
+  if (!ul) return;
 
-    if (!texto) {
-      alert('Relatório ainda não carregou.');
+  ul.innerHTML = '<li>Carregando pedidos...</li>';
+
+  try {
+    const urlPed = `${BACKEND_URL}/api/relatorios/pedidos/${ID_CLIENTE}?inicio=${inicio}&fim=${fim}`;
+    const resp = await fetch(urlPed);
+    const pedidos = await resp.json();
+
+    if (!Array.isArray(pedidos) || pedidos.length === 0) {
+      ul.innerHTML = '<li>Nenhum pedido detalhado.</li>';
+      textoZapCompleto = '';
       return;
     }
 
-    const msg = encodeURIComponent(texto);
-    window.open(`https://wa.me/?text=${msg}`, '_blank');
-  }
-
-  function verificarEstoqueCritico(listaProdutos) {
-    const caixa = document.getElementById('alerta-estoque');
-    const ul = document.getElementById('lista-estoque-critico');
-    if (!caixa || !ul || !Array.isArray(listaProdutos)) return;
-
-    // Filtra produtos com estoque <= 5
-    const criticos = listaProdutos
-      .filter((p) => {
-        const qtd = Number(p.estoque ?? p.quantidade ?? 99);
-        return qtd <= 5;
-      })
-      .sort((a, b) => {
-        const qa = Number(a.estoque ?? a.quantidade ?? 0);
-        const qb = Number(b.estoque ?? b.quantidade ?? 0);
-        return qa - qb;
-      });
-
-    if (criticos.length === 0) {
-      caixa.style.display = 'none';
-      return;
-    }
-
-    let html = '';
-    criticos.forEach((p) => {
-      const qtd = Number(p.estoque ?? p.quantidade ?? 0);
-      const nome = p.nome || p.titulo || 'Produto';
-
-      if (qtd <= 0) {
-        html += `
-        <li style="margin-bottom: 6px; color: #ff4444;">
-          🔴 <strong>${nome}</strong> — ESGOTADO (0)
-        </li>`;
-      } else {
-        html += `
-        <li style="margin-bottom: 6px; color: #fbbf24;">
-          🟡 <strong>${nome}</strong> — restam ${qtd} un.
-        </li>`;
-      }
-    });
-
-    ul.innerHTML = html;
-    caixa.style.display = 'block';
-  }
-
-  async function buscarPedidosDetalhados(inicio, fim) {
-    const ul = document.getElementById('listaPedidosDetalhados');
-    if (!ul) return;
-
-    ul.innerHTML = '<li>Carregando pedidos...</li>';
-
-    try {
-      const base = 'https://skewers-order-backend.vercel.app';
-      const rota = `/api/relatorios/pedidos/${ID_CLIENTE}`;
-      const url = `${base}${rota}?inicio=${inicio}&fim=${fim}`;
-
-      const resp = await fetch(url);
-      const pedidos = await resp.json();
-
-      if (!Array.isArray(pedidos) || pedidos.length === 0) {
-        ul.innerHTML = '<li>Nenhum pedido detalhado.</li>';
-        textoZapCompleto = '';
-        return;
-      }
-
-      ul.innerHTML = pedidos
-        .map((p) => {
-          const valor = Number(p.total || 0).toFixed(2);
-          const nome = p.cliente_nome || 'Cliente';
-          const tipo = p.tipo_entrega || 'Pedido';
-          const hora = p.hora_local
-            ? new Date(p.hora_local).toLocaleTimeString(
-              'pt-BR',
-              { hour: '2-digit', minute: '2-digit' }
-            )
-            : '--:--';
-
-          const extras = [];
-          if (p.farofa === 'Sim') extras.push('Farofa');
-          if (p.vinagrete === 'Sim') extras.push('Vinagrete');
-          const txtExtras = extras.length > 0
-            ? ` (${extras.join(' + ')})`
-            : '';
-
-          const obs = p.observacoes
-            ? `<br><small style="color: #fbbf24;">Obs: ${p.observacoes}</small>`
-            : '';
-
-          return `
-          <li style="padding: 10px; border-bottom: 1px solid #444;">
-            <strong>${hora}</strong> — ${nome}
-            <span style="color: #38bdf8;">[${tipo}]</span>
-            <strong style="float: right; color: #4ade80;">
-              R$ ${valor}
-            </strong>
-            <br>
-            <small style="color: #aaa;">
-              Acompanhamentos:${txtExtras || ' Nenhum'}
-            </small>
-            ${obs}
-          </li>
-        `;
-        })
-        .join('');
-
-      let blocoPedidos = '\n\n🧾 *PEDIDOS DETALHADOS:*\n';
-
-      pedidos.forEach((p) => {
+    ul.innerHTML = pedidos
+      .map((p) => {
         const valor = Number(p.total || 0).toFixed(2);
         const nome = p.cliente_nome || 'Cliente';
         const tipo = p.tipo_entrega || 'Pedido';
         const hora = p.hora_local
-          ? new Date(p.hora_local).toLocaleTimeString(
-            'pt-BR',
-            { hour: '2-digit', minute: '2-digit' }
-          )
+          ? new Date(p.hora_local).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
           : '--:--';
 
         const extras = [];
         if (p.farofa === 'Sim') extras.push('Farofa');
         if (p.vinagrete === 'Sim') extras.push('Vinagrete');
-        const extraTxt = extras.length
-          ? ` | ${extras.join(' + ')}`
+        const txtExtras = extras.length > 0 ? ` (${extras.join(' + ')})` : '';
+
+        const obs = p.observacoes
+          ? `<br><small style="color: #fbbf24;">Obs: ${p.observacoes}</small>`
           : '';
 
-        const obsTxt = p.observacoes
-          ? `\n   _Obs: ${p.observacoes}_`
-          : '';
+        return `
+          <li style="padding: 10px; border-bottom: 1px solid #444;">
+            <strong>${hora}</strong> — ${nome}
+            <span style="color: #38bdf8;">[${tipo}]</span>
+            <strong style="float: right; color: #4ade80;">R$ ${valor}</strong>
+            <br>
+            <small style="color: #aaa;">Acompanhamentos:${txtExtras || ' Nenhum'}</small>
+            ${obs}
+          </li>
+        `;
+      })
+      .join('');
 
-        blocoPedidos +=
-          `\n• *${hora}* — ${nome} (${tipo})${extraTxt}` +
-          `\n  *Valor:* R$ ${valor}${obsTxt}`;
-      });
+    let blocoPedidos = '\n\n🧾 *PEDIDOS DETALHADOS:*\n';
+    pedidos.forEach((p) => {
+      const valor = Number(p.total || 0).toFixed(2);
+      const nome = p.cliente_nome || 'Cliente';
+      const tipo = p.tipo_entrega || 'Pedido';
+      const hora = p.hora_local
+        ? new Date(p.hora_local).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+        : '--:--';
 
-      textoZapCompleto = `${textoZapResumo}${blocoPedidos}`;
-    } catch (erro) {
-      console.error('Erro ao carregar pedidos:', erro);
-      ul.innerHTML = '<li>Erro ao carregar pedidos.</li>';
-    }
+      const extras = [];
+      if (p.farofa === 'Sim') extras.push('Farofa');
+      if (p.vinagrete === 'Sim') extras.push('Vinagrete');
+      const extraTxt = extras.length ? ` | ${extras.join(' + ')}` : '';
+      const obsTxt = p.observacoes ? `\n   _Obs: ${p.observacoes}_` : '';
+
+      blocoPedidos += `\n• *${hora}* — ${nome} (${tipo})${extraTxt}\n  *Valor:* R$ ${valor}${obsTxt}`;
+    });
+
+    textoZapCompleto = `${textoZapResumo}${blocoPedidos}`;
+  } catch (erro) {
+    console.error('Erro ao carregar pedidos detalhados:', erro);
+    ul.innerHTML = '<li>Erro ao carregar pedidos.</li>';
+  }
+}
+
+function enviarFechamentoZap(tipo = 'resumo') {
+  const texto = tipo === 'completo' ? textoZapCompleto : textoZapResumo;
+  if (!texto) {
+    alert('Relatório ainda não carregou.');
+    return;
   }
 
+  const msg = encodeURIComponent(texto);
+  window.open(`https://wa.me/?text=${msg}`, '_blank', 'noopener,noreferrer');
+}
+
+function verificarEstoqueCritico(listaProdutos) {
+  const caixa = document.getElementById('alerta-estoque');
+  const ul = document.getElementById('lista-estoque-critico');
+  if (!caixa || !ul || !Array.isArray(listaProdutos)) return;
+
+  const criticos = listaProdutos
+    .filter((p) => Number(p.estoque ?? p.quantidade ?? 99) <= 5)
+    .sort((a, b) => Number(a.estoque ?? a.quantidade ?? 0) - Number(b.estoque ?? b.quantidade ?? 0));
+
+  if (criticos.length === 0) {
+    caixa.style.display = 'none';
+    return;
+  }
+
+  let html = '';
+  criticos.forEach((p) => {
+    const qtd = Number(p.estoque ?? p.quantidade ?? 0);
+    const nome = p.nome || p.titulo || 'Produto';
+
+    if (qtd <= 0) {
+      html += `<li style="margin-bottom: 6px; color: #ff4444;">🔴 <strong>${nome}</strong> — ESGOTADO (0)</li>`;
+    } else {
+      html += `<li style="margin-bottom: 6px; color: #fbbf24;">🟡 <strong>${nome}</strong> — restam ${qtd} un.</li>`;
+    }
+  });
+
+  ul.innerHTML = html;
+  caixa.style.display = 'block';
 }

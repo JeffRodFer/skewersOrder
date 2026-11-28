@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cardápio de Espetinhos</title>
+  <!-- Aqui conectamos o arquivo de estilos -->
+  <link rel="stylesheet" href="style.css">
+  <!-- Importando o Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+  <!-- Cabeçalho -->
+  <header>
+    <div class="relogio" id="relogio">
+      00/00/0000 00:00:00
+    </div>
+    <div class="logo-titulo">Cardápio Espetinhos</div>
+    <a id="link-whatsapp-header" href="https://wa.me/5581920036280" class="btn-whatsapp" target="_blank" rel="noopener noreferrer">
+  WhatsApp
+</a>
+  </header>
+
+  <!-- Área de Iniciar Pedido -->
+  <div class="area-iniciar">
+    <button class="btn-iniciar" onclick="abrirModalCadastro()">
+      INICIAR PEDIDO
+    </button>
+  </div>
+
+  <!-- Lista de Comidas -->
+  <div class="secao-produtos">
+    <h2 class="titulo-carnes">Carnes e Acompanhamentos</h2>
+    <div id="lista-carnes"></div> <!-- A MUDANÇA FOI FEITA AQUI -->
+  </div>
+
+  <!-- Lista de Bebidas -->
+  <div class="secao-produtos">
+    <h2 class="titulo-bebidas">Bebidas</h2>
+    <div id="lista-bebidas"></div>
+  </div>
+
+  <!-- Área de Encerrar Pedido -->
+  <div class="area-iniciar">
+    <button class="btn-iniciar" style="animation: none; background: #ff9900;" onclick="abrirResumo()">
+      ENCERRAR PEDIDO
+    </button>
+  </div>
+
+  <!-- Rodapé -->
+  <footer>
+    <button class="btn-gerenciar" onclick="abrirModalAdmin()">
+      ⚙️ Gerenciar
+    </button>
+    <div class="msg-agradecimento">Agradecemos a Preferência</div>
+    <div style="width: 80px;"></div>
+  </footer>
+
+  <!-- MODAL 1: Cadastro do Cliente -->
+  <div id="modalCadastro" class="modal">
+    <div class="modal-conteudo">
+      <h3>Identificação</h3>
+
+      <div class="form-group">
+        <label>Nome:</label>
+        <input type="text" id="cli-nome" placeholder="Seu nome">
+      </div>
+
+      <div class="form-group">
+        <label>Telefone:</label>
+        <input type="tel" id="cli-telefone" placeholder="(81) 90000-0000">
+      </div>
+
+      <div class="form-group">
+        <label>Retirada ou Entrega?</label>
+        <select id="cli-tipo" onchange="verificarEntrega()">
+          <option value="retirar">Vou retirar no local</option>
+          <option value="entregar">Quero entrega (Terá taxa)</option>
+        </select>
+      </div>
+
+      <div class="form-group" id="div-endereco" style="display:none;">
+        <label>Endereço Completo:</label>
+        <input type="text" id="cli-endereco" placeholder="Rua, Número, Bairro">
+      </div>
+
+      <!-- NOVA ÁREA DE BOTÕES -->
+      <button type="button" class="btn-acao" onclick="fecharModalCadastro()"
+        style="flex: 1; background-color: #666666;">
+        Voltar
+      </button>
+
+      <button class="btn-acao" onclick="salvarCadastro()" style="flex: 2;">
+        Confirmar
+      </button>
+    </div>
+
+  </div> <!-- Fecha a modal-conteudo -->
+
+  <!-- MODAL 2: Resumo do Pedido -->
+  <div id="modalResumo" class="modal">
+    <div class="modal-conteudo">
+      <h3>Resumo do Pedido</h3>
+      <div id="conteudo-resumo" style="font-size: 14px; margin-bottom: 20px;">
+      </div>
+
+      <!-- INÍCIO DAS NOVAS OPÇÕES DE FAROFA, VINAGRETE E OBS -->
+
+      <!-- Opção de Farofa -->
+      <div class="form-group">
+        <label>Incluir Farofa?</label>
+        <div style="display: flex; gap: 15px; margin-top: 5px;">
+          <label><input type="radio" name="farofa" value="Sim" checked> Sim</label>
+          <label><input type="radio" name="farofa" value="Não"> Não</label>
+        </div>
+      </div>
+
+      <!-- Opção de Vinagrete -->
+      <div class="form-group">
+        <label>Incluir Vinagrete?</label>
+        <div style="display: flex; gap: 15px; margin-top: 5px;">
+          <label><input type="radio" name="vinagrete" value="Sim" checked> Sim</label>
+          <label><input type="radio" name="vinagrete" value="Não"> Não</label>
+        </div>
+      </div>
+
+      <!-- Campo de Observações -->
+      <div class="form-group">
+        <label>Observações do Pedido:</label>
+        <textarea id="obs-pedido" rows="3" maxlength="90" placeholder="Ex: Bem passado, deixar na portaria..."
+          style="width: 100%; border-radius: 5px; padding: 8px;"></textarea>
+        <div id="contador-obs">0/90 caracteres</div>
+      </div>
+
+      <!-- FIM DAS NOVAS OPÇÕES -->
+
+      <h3 id="valor-total">Total: R$ 0,00</h3>
+      <button class="btn-acao btn-whatsapp" onclick="finalizarPedido()">
+        Enviar Pedido (WhatsApp)
+      </button>
+      <button class="btn-acao btn-fechar" onclick="fecharModal('modalResumo')">
+        Voltar e Escolher Mais
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Login Admin (Gerenciar) -->
+  <div id="modalAdmin" class="modal">
+    <div class="modal-conteudo">
+      <h3>Área Restrita (Gerenciar)</h3>
+      <div class="form-group">
+        <label>Usuário:</label>
+        <input type="text" id="admin-user">
+      </div>
+      <div class="form-group">
+        <label>Senha:</label>
+        <input type="password" id="admin-pass">
+      </div>
+      <button type="button" class="btn-acao" onclick="loginAdmin(event)">Entrar</button>
+      <button type="button" class="btn-acao btn-fechar" onclick="fecharModal('modalAdmin')">
+        Cancelar
+      </button>
+    </div>
+  </div>
+
+
+  <!-- PAINEL DE ADMINISTRAÇÃO (Abre pelo botão Gerenciar) -->
+  <div id="painel-admin" style="display: none; padding: 20px; min-height: 100vh;">
+    <!-- Cabeçalho do Gerenciar -->
+    <div style="display: flex; justify-content: space-between;
+              align-items: center; border-bottom: 2px solid white;
+              padding-bottom: 10px; margin-bottom: 20px;">
+      <h2 style="color: white; margin: 0;">⚙️ Gestão do Cardápio</h2>
+      <button class="btn-acao btn-fechar" onclick="fecharPainelAdmin()" style="width: auto; padding: 10px 20px;">
+        Sair
+      </button>
+    </div>
+
+    <!-- 1º: Lista de produtos e estoque -->
+    <p style="color: #ccc;">
+      Clique no botão para Ativar ou Desativar os produtos na loja.
+    </p>
+    <div id="lista-admin"></div>
+
+    <!-- 2º: Botão retrátil NO FINAL do Gerenciar -->
+    <div style="text-align: center; margin: 30px 0;">
+      <button id="btn-gestor" onclick="alternarPainel()">
+        📊 Ver Resumo Operacional e Vendas
+      </button>
+    </div>
+
+    <!-- 3º: Janela Operacional (Oculta dentro do Gerenciar) -->
+    <div id="painel-operacional" style="display: none; background-color: #222; padding: 20px;
+           border-radius: 10px; margin-bottom: 20px;">
+      <!-- Alerta de Estoque Crítico (NOVO) -->
+      <div id="alerta-estoque" style="display: none; background-color: #3b1212;
+                  border: 1px solid #ff4444; border-radius: 8px;
+                  padding: 15px; margin-bottom: 20px;
+                  color: #ffcccc;">
+        <h3 style="color: #ff6666; margin-top: 0;">
+          ⚠️ Alerta de Estoque Crítico
+        </h3>
+        <ul id="lista-estoque-critico" style="list-style: none; padding: 0; margin: 0;">
+        </ul>
+      </div>
+      <h3 style="color: white; text-align: center;">
+        📊 Top 7 Mais Vendidos
+      </h3>
+      <canvas id="graficoVendas" width="400" height="280"></canvas>
+
+      <!-- Faturamento, Calendário e Zerar -->
+      <div style="margin-top: 40px; text-align: center;
+                border-top: 1px solid #555; padding-top: 20px;">
+        <h3 style="color: white;">💰 Faturamento por Período</h3>
+
+        <div style="margin: 15px 0; display: flex;
+            flex-wrap: wrap; gap: 10px;
+            justify-content: center;
+            align-items: center;">
+          <div>
+            <label for="filtro-inicio" style="color: #ccc;">
+              De:
+            </label>
+            <input type="date" id="filtro-inicio" onchange="buscarVendasPorData()" style="padding: 8px; border-radius: 5px;
+                  border: none; margin-left: 4px;">
+          </div>
+
+          <div>
+            <label for="filtro-fim" style="color: #ccc;">
+              Até:
+            </label>
+            <input type="date" id="filtro-fim" onchange="buscarVendasPorData()" style="padding: 8px; border-radius: 5px;
+                  border: none; margin-left: 4px;">
+          </div>
+        </div>
+
+
+
+        <ul id="listaVendasDiarias" style="color: white; list-style: none; padding: 0;
+               font-size: 18px;"></ul>
+
+        <h4 style="color: #ccc; margin-top: 25px; margin-bottom: 10px;">
+          🧾 Todos os Pedidos do Período
+        </h4>
+        <ul id="listaPedidosDetalhados" style="color: #eee; list-style: none; padding: 0;
+                   font-size: 15px; text-align: left;
+                   max-width: 520px; margin: 0 auto 15px auto;">
+        </ul>
+
+        <div style="margin-top: 15px; display: flex;
+            flex-wrap: wrap; gap: 10px;
+            justify-content: center;">
+          <button id="btn-zap-resumo" onclick="enviarFechamentoZap('resumo')" style="background-color: #25D366; color: white;
+                 padding: 12px 18px; border: none;
+                 border-radius: 5px; cursor: pointer;
+                 font-weight: bold; font-size: 15px;
+                 display: none;">
+            📲 Relatório Resumido
+          </button>
+
+          <button id="btn-zap-completo" onclick="enviarFechamentoZap('completo')" style="background-color: #128C7E; color: white;
+                 padding: 12px 18px; border: none;
+                 border-radius: 5px; cursor: pointer;
+                 font-weight: bold; font-size: 15px;
+                 display: none;">
+            📋 Relatório Completo
+          </button>
+        </div>
+
+        <button onclick="zerarVendas()" style="background-color: #ff4444; color: white;
+               padding: 12px 24px; border: none; border-radius: 5px;
+               cursor: pointer; margin-top: 20px; font-weight: bold;
+               font-size: 16px;">
+          🗑️ Zerar Todo o Histórico de Vendas
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- Aqui conectamos o arquivo de lógica e ações -->
+  <script src="script.js"></script>
+</body>
+
+</html>
